@@ -14,6 +14,31 @@ dist-ssr
 coverage
 *.local
 
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Package manager and tool caches
+.npm
+.pnpm-store
+.yarn
+.cache
+.parcel-cache
+.turbo
+.vite
+
+# Local deployment metadata
+.netlify
+.vercel
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
