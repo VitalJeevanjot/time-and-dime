@@ -1,6 +1,14 @@
 <script setup>
-import OperationPicker from './OperationPicker.vue'
-import TimeLimit from './TimeLimit.vue'
+import OperationPicker from './shared/OperationPicker.vue'
+import TimeLimit from './shared/TimeLimit.vue'
+
+defineProps({
+  timeLimitType: {
+    type: String,
+    default: 'duration',
+    validator: (value) => ['duration', 'dateTime'].includes(value),
+  },
+})
 
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
@@ -12,7 +20,6 @@ const timeLimitEnabled = defineModel('timeLimitEnabled', { type: Boolean, defaul
 const timeLimit = defineModel('timeLimit', {
   type: Object,
   default: () => ({
-    mode: 'duration',
     from: {
       value: 0,
       unit: 'Seconds',
@@ -86,7 +93,7 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
       </label>
     </div>
 
-    <TimeLimit v-if="timeLimitEnabled" v-model="timeLimit" />
+    <TimeLimit v-if="timeLimitEnabled" v-model="timeLimit" :type="timeLimitType" />
 
     <label class="field">
       <span>Name</span>

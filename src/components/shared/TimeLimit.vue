@@ -1,12 +1,17 @@
 <script setup>
-import { useId } from 'vue'
+defineOptions({ name: 'TimeLimit' })
 
-const modeName = `${useId()}-time-limit-mode`
+defineProps({
+  type: {
+    type: String,
+    default: 'duration',
+    validator: (value) => ['duration', 'dateTime'].includes(value),
+  },
+})
 
 const timeLimit = defineModel({
   type: Object,
   default: () => ({
-    mode: 'duration',
     from: {
       value: 0,
       unit: 'Seconds',
@@ -32,10 +37,6 @@ const minutesAndSeconds = Array.from({ length: 60 }, (_, index) =>
   String(index).padStart(2, '0'),
 )
 
-function setMode(mode) {
-  timeLimit.value = { ...timeLimit.value, mode }
-}
-
 function updateSection(section, field, value) {
   timeLimit.value = {
     ...timeLimit.value,
@@ -54,33 +55,7 @@ function updateDuration(section, input) {
 
 <template>
   <section class="time-limit" aria-label="Time limit settings">
-    <fieldset class="mode-field">
-      <legend>Time limit type</legend>
-      <div class="mode-toggle">
-        <label :class="['mode-option', { active: timeLimit.mode === 'duration' }]">
-          <input
-            :checked="timeLimit.mode === 'duration'"
-            :name="modeName"
-            type="radio"
-            value="duration"
-            @change="setMode('duration')"
-          />
-          <span>Duration</span>
-        </label>
-        <label :class="['mode-option', { active: timeLimit.mode === 'dateTime' }]">
-          <input
-            :checked="timeLimit.mode === 'dateTime'"
-            :name="modeName"
-            type="radio"
-            value="dateTime"
-            @change="setMode('dateTime')"
-          />
-          <span>Date &amp; time</span>
-        </label>
-      </div>
-    </fieldset>
-
-    <div v-if="timeLimit.mode === 'duration'" class="range-fields">
+    <div v-if="type === 'duration'" class="range-fields">
       <div v-for="section in ['from', 'until']" :key="section" class="range-field">
         <span class="range-label">{{ section === 'from' ? 'From' : 'Until' }}</span>
         <div class="duration-inputs">
@@ -166,52 +141,10 @@ function updateDuration(section, input) {
   background: #111111;
 }
 
-.mode-field {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.mode-field legend,
 .range-label {
   margin-bottom: 0.4rem;
   padding: 0;
   font-weight: 600;
-}
-
-.mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0.25rem;
-  border: 1px solid #3a3a3a;
-  border-radius: 0.5rem;
-  background: #181818;
-}
-
-.mode-option {
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.35rem;
-  color: #a8a8a8;
-  cursor: pointer;
-  text-align: center;
-}
-
-.mode-option.active {
-  background: #f5f5f5;
-  color: #111111;
-}
-
-.mode-option:focus-within {
-  outline: 2px solid #8a8a8a;
-  outline-offset: 1px;
-}
-
-.mode-option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
 }
 
 .range-fields,

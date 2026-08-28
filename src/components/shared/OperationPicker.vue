@@ -1,4 +1,6 @@
 <script setup>
+defineOptions({ name: 'OperationPicker' })
+
 const operation = defineModel({ type: String, default: '+' })
 
 const operations = [

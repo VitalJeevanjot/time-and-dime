@@ -10,8 +10,8 @@ const valueCardTime = ref(0)
 const valueCardTimeUnit = ref('Seconds')
 const valueCardOperation = ref('+')
 const valueCardTimeLimitEnabled = ref(false)
+const timeLimitType = ref('duration')
 const valueCardTimeLimit = ref({
-  mode: 'duration',
   from: {
     value: 0,
     unit: 'Seconds',
@@ -37,6 +37,25 @@ const percentageCardValueSource = ref('Original')
 const percentageCardTime = ref(0)
 const percentageCardTimeUnit = ref('Second')
 const percentageCardOperation = ref('+')
+const percentageCardTimeLimitEnabled = ref(false)
+const percentageCardTimeLimit = ref({
+  from: {
+    value: 0,
+    unit: 'Seconds',
+    date: '',
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+  },
+  until: {
+    value: 0,
+    unit: 'Seconds',
+    date: '',
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+  },
+})
 </script>
 
 <template>
@@ -51,6 +70,7 @@ const percentageCardOperation = ref('+')
         v-model:time-unit="valueCardTimeUnit"
         v-model:time-limit-enabled="valueCardTimeLimitEnabled"
         v-model:time-limit="valueCardTimeLimit"
+        :time-limit-type="timeLimitType"
       />
 
       <PercentageCard
@@ -61,6 +81,9 @@ const percentageCardOperation = ref('+')
         v-model:value-source="percentageCardValueSource"
         v-model:time="percentageCardTime"
         v-model:time-unit="percentageCardTimeUnit"
+        v-model:time-limit-enabled="percentageCardTimeLimitEnabled"
+        v-model:time-limit="percentageCardTimeLimit"
+        :time-limit-type="timeLimitType"
       />
     </div>
   </main>
