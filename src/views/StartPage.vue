@@ -1,5 +1,45 @@
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+
 const numbers = Array.from({ length: 100 }, (_, index) => index + 1)
+const router = useRouter()
+const webMcpController = new AbortController()
+
+onMounted(async () => {
+  if (!document.modelContext?.registerTool) return
+
+  try {
+    await document.modelContext.registerTool(
+      {
+        name: 'open_create_project',
+        description: 'Open the Create Project page to configure a new Time&Dime project.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          void router.push('/projects/new')
+          return 'Opened the Create Project page.'
+        },
+        annotations: {
+          readOnlyHint: true,
+          untrustedContentHint: false,
+        },
+      },
+      { signal: webMcpController.signal },
+    )
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP create-project tool.', error)
+    }
+  }
+})
+
+onUnmounted(() => {
+  webMcpController.abort()
+})
 </script>
 
 <template>
@@ -7,13 +47,13 @@ const numbers = Array.from({ length: 100 }, (_, index) => index + 1)
     <h1 class="page-title">Time&amp;Dime</h1>
 
     <section class="card-grid" aria-label="Projects">
-      <button class="project-card create-card" type="button" aria-label="Create new project">
+      <RouterLink class="project-card create-card" to="/projects/new" aria-label="Create new project">
         <svg class="create-icon" viewBox="0 0 48 48" role="img" aria-hidden="true">
           <path d="M24 42V8M18 14l6-6 6 6" />
           <path d="M6 24h34M34 18l6 6-6 6" />
         </svg>
         <span>Create new project</span>
-      </button>
+      </RouterLink>
 
       <article v-for="number in numbers" :key="number" class="project-card number-card">
         <span>{{ number }}</span>
@@ -63,6 +103,7 @@ const numbers = Array.from({ length: 100 }, (_, index) => index + 1)
   color: #181818;
   cursor: pointer;
   font-weight: 600;
+  text-decoration: none;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 

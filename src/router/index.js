@@ -14,6 +14,11 @@ const router = createRouter({
       component: () => import('../views/UiDemoPage.vue'),
     },
     {
+      path: '/projects/new',
+      name: 'create-project',
+      component: () => import('../views/CreateProjectPage.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
