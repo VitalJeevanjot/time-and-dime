@@ -149,3 +149,26 @@ export function addProjectNodeAbove(projectId, targetNodeId, node) {
 
   return saveNodes(project, nodes)
 }
+
+export function addProjectNodeRight(projectId, targetNodeId, node) {
+  const project = getProject(projectId)
+  if (!project) throw new Error(`Project ${projectId} was not found.`)
+
+  const targetIndex = project.nodes.findIndex((projectNode) => projectNode.id === targetNodeId)
+  if (targetIndex === -1) throw new Error(`Node ${targetNodeId} was not found.`)
+
+  const targetNode = project.nodes[targetIndex]
+  const normalizedNode = createUniqueProjectNode(project, node)
+  const nodeToRight = {
+    ...normalizedNode,
+    relations: {
+      ...normalizedNode.relations,
+      aboveCardId: targetNode.relations?.aboveCardId ?? null,
+      belowCardId: targetNode.relations?.belowCardId ?? null,
+    },
+  }
+  const nodes = [...project.nodes]
+  nodes.splice(targetIndex + 1, 0, nodeToRight)
+
+  return saveNodes(project, nodes)
+}

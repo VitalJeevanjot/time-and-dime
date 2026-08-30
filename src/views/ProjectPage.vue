@@ -7,6 +7,7 @@ import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
 import {
   addProjectNode,
   addProjectNodeAbove,
+  addProjectNodeRight,
   getProject,
   updateProject,
 } from '../services/projectStorage.js'
@@ -16,10 +17,12 @@ const project = ref(null)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
 const nodePickerTargetId = ref(null)
+const nodePickerDirection = ref(null)
 
 function closeNodePicker() {
   nodePickerOpen.value = false
   nodePickerTargetId.value = null
+  nodePickerDirection.value = null
 }
 
 function toggleInitialNodePicker() {
@@ -29,23 +32,52 @@ function toggleInitialNodePicker() {
   }
 
   nodePickerTargetId.value = null
+  nodePickerDirection.value = null
   nodePickerOpen.value = true
 }
 
 function toggleAboveNodePicker(nodeId) {
-  if (nodePickerOpen.value && nodePickerTargetId.value === nodeId) {
+  if (
+    nodePickerOpen.value &&
+    nodePickerTargetId.value === nodeId &&
+    nodePickerDirection.value === 'above'
+  ) {
     closeNodePicker()
     return
   }
 
   nodePickerTargetId.value = nodeId
+  nodePickerDirection.value = 'above'
+  nodePickerOpen.value = true
+}
+
+function toggleRightNodePicker(nodeId) {
+  if (
+    nodePickerOpen.value &&
+    nodePickerTargetId.value === nodeId &&
+    nodePickerDirection.value === 'right'
+  ) {
+    closeNodePicker()
+    return
+  }
+
+  nodePickerTargetId.value = nodeId
+  nodePickerDirection.value = 'right'
   nodePickerOpen.value = true
 }
 
 function selectNodeType(nodeType) {
-  project.value = nodePickerTargetId.value
-    ? addProjectNodeAbove(route.params.id, nodePickerTargetId.value, { type: nodeType })
-    : addProjectNode(route.params.id, { type: nodeType })
+  if (nodePickerDirection.value === 'right') {
+    project.value = addProjectNodeRight(route.params.id, nodePickerTargetId.value, {
+      type: nodeType,
+    })
+  } else if (nodePickerDirection.value === 'above') {
+    project.value = addProjectNodeAbove(route.params.id, nodePickerTargetId.value, {
+      type: nodeType,
+    })
+  } else {
+    project.value = addProjectNode(route.params.id, { type: nodeType })
+  }
   closeNodePicker()
 }
 
@@ -86,6 +118,29 @@ const formattedCreatedAt = computed(() => {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(project.value.createdAt))
+})
+
+const nodeLevels = computed(() => {
+  const levels = []
+  const levelsByRelations = new Map()
+
+  for (const node of project.value?.nodes ?? []) {
+    const levelKey = JSON.stringify([
+      node.relations?.aboveCardId ?? null,
+      node.relations?.belowCardId ?? null,
+    ])
+    let level = levelsByRelations.get(levelKey)
+
+    if (!level) {
+      level = { key: levelKey, nodes: [] }
+      levelsByRelations.set(levelKey, level)
+      levels.push(level)
+    }
+
+    level.nodes.push(node)
+  }
+
+  return levels
 })
 </script>
 
@@ -147,76 +202,95 @@ const formattedCreatedAt = computed(() => {
 
     <div v-if="project.nodes.length" class="node-scroller">
       <section class="node-workspace" aria-label="Project nodes">
-        <div v-for="(node, index) in project.nodes" :key="node.id" class="node-shell">
+        <div v-for="level in nodeLevels" :key="level.key" class="node-level">
           <div
-            v-if="nodePickerOpen && nodePickerTargetId === node.id"
-            class="above-node-picker"
-            @click.stop
+            class="node-level-track"
+            :class="{ 'has-horizontal-scroll': level.nodes.length > 1 }"
           >
-            <NodeTypePicker @select="selectNodeType" />
+            <div v-for="node in level.nodes" :key="node.id" class="node-shell">
+              <div
+                v-if="nodePickerOpen && nodePickerTargetId === node.id"
+                class="card-node-picker"
+                @click.stop
+              >
+                <NodeTypePicker @select="selectNodeType" />
+              </div>
+
+              <button
+                class="surrounding-add top-add"
+                type="button"
+                aria-label="Add node above"
+                aria-haspopup="menu"
+                :aria-expanded="
+                  nodePickerOpen &&
+                  nodePickerTargetId === node.id &&
+                  nodePickerDirection === 'above'
+                "
+                @click.stop="toggleAboveNodePicker(node.id)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+
+              <span class="node-count" :aria-label="`Node ${node.index}`">
+                {{ node.index }}
+              </span>
+
+              <ValueCard
+                v-if="node.type === 'value'"
+                v-model:operation="node.operation"
+                v-model:name="node.details.name"
+                v-model:description="node.details.description"
+                v-model:value="node.value"
+                v-model:time="node.timing.value"
+                v-model:time-unit="node.timing.unit"
+                v-model:time-limit-enabled="node.timeLimit.enabled"
+                v-model:time-limit="node.timeLimit"
+                :time-limit-type="node.timeLimit.type"
+              />
+              <PercentageCard
+                v-else-if="node.type === 'percentage'"
+                v-model:operation="node.operation"
+                v-model:name="node.details.name"
+                v-model:description="node.details.description"
+                v-model:percentage="node.percentage.value"
+                v-model:value-source="node.percentage.source"
+                v-model:time="node.timing.value"
+                v-model:time-unit="node.timing.unit"
+                v-model:time-limit-enabled="node.timeLimit.enabled"
+                v-model:time-limit="node.timeLimit"
+                :time-limit-type="node.timeLimit.type"
+              />
+
+              <button
+                class="surrounding-add right-add"
+                type="button"
+                aria-label="Add node to the right"
+                aria-haspopup="menu"
+                :aria-expanded="
+                  nodePickerOpen &&
+                  nodePickerTargetId === node.id &&
+                  nodePickerDirection === 'right'
+                "
+                @click.stop="toggleRightNodePicker(node.id)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+              <button
+                v-if="node.index === 1"
+                class="surrounding-add bottom-add"
+                type="button"
+                aria-label="Add node below"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
           </div>
-
-          <button
-            class="surrounding-add top-add"
-            type="button"
-            aria-label="Add node above"
-            aria-haspopup="menu"
-            :aria-expanded="nodePickerOpen && nodePickerTargetId === node.id"
-            @click.stop="toggleAboveNodePicker(node.id)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-
-          <span
-            class="node-count"
-            :aria-label="`Node ${node.index ?? project.nodes.length - index}`"
-          >
-            {{ node.index ?? project.nodes.length - index }}
-          </span>
-
-          <ValueCard
-            v-if="node.type === 'value'"
-            v-model:operation="node.operation"
-            v-model:name="node.details.name"
-            v-model:description="node.details.description"
-            v-model:value="node.value"
-            v-model:time="node.timing.value"
-            v-model:time-unit="node.timing.unit"
-            v-model:time-limit-enabled="node.timeLimit.enabled"
-            v-model:time-limit="node.timeLimit"
-            :time-limit-type="node.timeLimit.type"
-          />
-          <PercentageCard
-            v-else-if="node.type === 'percentage'"
-            v-model:operation="node.operation"
-            v-model:name="node.details.name"
-            v-model:description="node.details.description"
-            v-model:percentage="node.percentage.value"
-            v-model:value-source="node.percentage.source"
-            v-model:time="node.timing.value"
-            v-model:time-unit="node.timing.unit"
-            v-model:time-limit-enabled="node.timeLimit.enabled"
-            v-model:time-limit="node.timeLimit"
-            :time-limit-type="node.timeLimit.type"
-          />
-
-          <button class="surrounding-add right-add" type="button" aria-label="Add node to the right">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-          <button
-            v-if="node.relations.belowCardId === null"
-            class="surrounding-add bottom-add"
-            type="button"
-            aria-label="Add node below"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
         </div>
       </section>
     </div>
@@ -412,12 +486,50 @@ dd {
   gap: 7rem;
 }
 
+.node-level {
+  position: relative;
+  min-width: 0;
+}
+
+.node-level-track {
+  display: flex;
+  margin: -4rem;
+  gap: 7rem;
+  padding: 4rem;
+  overflow: visible;
+}
+
+.node-level-track.has-horizontal-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-color: #888888 #dedede;
+  scrollbar-width: thin;
+}
+
+.node-level-track.has-horizontal-scroll::-webkit-scrollbar {
+  height: 0.55rem;
+}
+
+.node-level-track.has-horizontal-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: #dedede;
+}
+
+.node-level-track.has-horizontal-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #888888;
+}
+
 .node-shell {
   position: relative;
   width: 100%;
+  flex: 0 0 100%;
+  scroll-snap-align: center;
 }
 
-.node-shell + .node-shell::before {
+.node-level + .node-level::before {
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -428,7 +540,7 @@ dd {
   transform: translateX(-50%);
 }
 
-.above-node-picker {
+.card-node-picker {
   position: absolute;
   top: 0.75rem;
   left: 50%;
@@ -436,7 +548,7 @@ dd {
   transform: translateX(-50%);
 }
 
-.above-node-picker :deep(.node-type-picker)::after {
+.card-node-picker :deep(.node-type-picker)::after {
   display: none;
 }
 
