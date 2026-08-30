@@ -1,12 +1,19 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getProjects } from '../services/projectStorage.js'
 
-const numbers = Array.from({ length: 100 }, (_, index) => index + 1)
 const router = useRouter()
+const projects = ref([])
 const webMcpController = new AbortController()
 
 onMounted(async () => {
+  projects.value = getProjects().sort((firstProject, secondProject) => {
+    const firstCreatedAt = Date.parse(firstProject.createdAt) || 0
+    const secondCreatedAt = Date.parse(secondProject.createdAt) || 0
+    return secondCreatedAt - firstCreatedAt
+  })
+
   if (!document.modelContext?.registerTool) return
 
   try {
@@ -55,9 +62,15 @@ onUnmounted(() => {
         <span>Create new project</span>
       </RouterLink>
 
-      <article v-for="number in numbers" :key="number" class="project-card number-card">
-        <span>{{ number }}</span>
-      </article>
+      <RouterLink
+        v-for="project in projects"
+        :key="project.id"
+        class="project-card saved-project-card"
+        :to="{ name: 'project', params: { id: project.id } }"
+      >
+        <span class="project-name">{{ project.name }}</span>
+        <span v-if="project.description" class="project-description">{{ project.description }}</span>
+      </RouterLink>
     </section>
   </main>
 </template>
@@ -132,9 +145,38 @@ onUnmounted(() => {
   stroke-width: 3;
 }
 
-.number-card span {
-  font-size: 1.5rem;
+.saved-project-card {
+  align-items: flex-start;
+  color: #181818;
+  text-align: left;
+  text-decoration: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.saved-project-card:hover {
+  border-color: #a8a8a8;
+  box-shadow: 0 0.6rem 1.6rem rgb(0 0 0 / 10%);
+  transform: translateY(-2px);
+}
+
+.saved-project-card:focus-visible {
+  outline: 3px solid rgb(0 0 0 / 22%);
+  outline-offset: 3px;
+}
+
+.project-name {
+  font-size: 1.25rem;
   font-weight: 700;
+}
+
+.project-description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #686868;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 @media (max-width: 32rem) {

@@ -63,7 +63,7 @@ function normalizeDuration() {
     <div v-else class="date-time-inputs">
       <label class="date-field">
         <span>Date</span>
-        <input v-model="date" name="endDate" type="date" />
+        <input v-model="date" name="endDate" type="date" required />
       </label>
 
       <div class="time-field">
