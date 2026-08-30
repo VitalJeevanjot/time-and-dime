@@ -16,7 +16,7 @@ const description = defineModel('description', { type: String, default: '' })
 const percentage = defineModel('percentage', { type: Number, default: 0 })
 const valueSource = defineModel('valueSource', { type: String, default: 'Original' })
 const time = defineModel('time', { type: Number, default: 0 })
-const timeUnit = defineModel('timeUnit', { type: String, default: 'Second' })
+const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
 const timeLimitEnabled = defineModel('timeLimitEnabled', { type: Boolean, default: false })
 const timeLimit = defineModel('timeLimit', {
   type: Object,
@@ -40,7 +40,7 @@ const timeLimit = defineModel('timeLimit', {
   }),
 })
 
-const timeUnits = ['Millisecond', 'Second', 'Minute', 'Hours', 'Days', 'Months', 'Years']
+const timeUnits = ['Millisecond', 'Seconds', 'Minute', 'Hours', 'Days', 'Months', 'Years']
 
 function toPercentage(input) {
   const number = Number(input)

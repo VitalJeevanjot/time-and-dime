@@ -1,16 +1,17 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getProject } from '../services/projectStorage.js'
+import PercentageCard from '../components/PercentageCard.vue'
+import ValueCard from '../components/ValueCard.vue'
+import { addProjectNode, getProject, updateProject } from '../services/projectStorage.js'
 
 const route = useRoute()
 const project = ref(null)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
-const selectedNodeType = ref(null)
 
 function selectNodeType(nodeType) {
-  selectedNodeType.value = nodeType
+  project.value = addProjectNode(route.params.id, { type: nodeType })
   nodePickerOpen.value = false
 }
 
@@ -21,6 +22,15 @@ watch(
     showDetails.value = false
   },
   { immediate: true },
+)
+
+watch(
+  () => project.value?.nodes,
+  (nodes, previousNodes) => {
+    if (!project.value || !nodes || nodes !== previousNodes) return
+    updateProject(project.value)
+  },
+  { deep: true },
 )
 
 const formattedEndTime = computed(() => {
@@ -100,12 +110,58 @@ const formattedCreatedAt = computed(() => {
       </dl>
     </aside>
 
-    <div class="add-node-control" @click.stop>
+    <section v-if="project.nodes.length" class="node-workspace" aria-label="Project nodes">
+      <div v-for="node in project.nodes" :key="node.id" class="node-shell">
+        <button class="surrounding-add top-add" type="button" aria-label="Add node above">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+
+        <ValueCard
+          v-if="node.type === 'value'"
+          v-model:operation="node.operation"
+          v-model:name="node.details.name"
+          v-model:description="node.details.description"
+          v-model:value="node.value"
+          v-model:time="node.timing.value"
+          v-model:time-unit="node.timing.unit"
+          v-model:time-limit-enabled="node.timeLimit.enabled"
+          v-model:time-limit="node.timeLimit"
+          :time-limit-type="node.timeLimit.type"
+        />
+        <PercentageCard
+          v-else-if="node.type === 'percentage'"
+          v-model:operation="node.operation"
+          v-model:name="node.details.name"
+          v-model:description="node.details.description"
+          v-model:percentage="node.percentage.value"
+          v-model:value-source="node.percentage.source"
+          v-model:time="node.timing.value"
+          v-model:time-unit="node.timing.unit"
+          v-model:time-limit-enabled="node.timeLimit.enabled"
+          v-model:time-limit="node.timeLimit"
+          :time-limit-type="node.timeLimit.type"
+        />
+
+        <button class="surrounding-add right-add" type="button" aria-label="Add node to the right">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+        <button class="surrounding-add bottom-add" type="button" aria-label="Add node below">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <div v-else class="add-node-control" @click.stop>
       <div v-if="nodePickerOpen" id="node-type-picker" class="node-type-picker" role="menu">
         <p>Select node type</p>
         <button
           class="node-type-option"
-          :class="{ selected: selectedNodeType === 'percentage' }"
           type="button"
           role="menuitem"
           @click="selectNodeType('percentage')"
@@ -115,7 +171,6 @@ const formattedCreatedAt = computed(() => {
         </button>
         <button
           class="node-type-option"
-          :class="{ selected: selectedNodeType === 'value' }"
           type="button"
           role="menuitem"
           @click="selectNodeType('value')"
@@ -284,6 +339,66 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.node-workspace {
+  display: grid;
+  width: min(38rem, calc(100% - 4rem));
+  margin: 5rem auto 2rem;
+  gap: 7rem;
+}
+
+.node-shell {
+  position: relative;
+  width: 100%;
+}
+
+.surrounding-add {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.8rem;
+  background: #111111;
+  box-shadow: 0 0.45rem 1.25rem rgb(0 0 0 / 18%);
+  color: #ffffff;
+  cursor: pointer;
+  place-items: center;
+}
+
+.surrounding-add svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.surrounding-add path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.top-add {
+  top: -3.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.right-add {
+  top: 50%;
+  right: -3.6rem;
+  background: #f97316;
+  transform: translateY(-50%);
+}
+
+.bottom-add {
+  bottom: -3.6rem;
+  left: 50%;
+  background: #2563eb;
+  transform: translateX(-50%);
+}
+
 .add-node-control {
   position: fixed;
   bottom: 1.5rem;
@@ -346,8 +461,7 @@ dd {
   text-align: left;
 }
 
-.node-type-option:hover,
-.node-type-option.selected {
+.node-type-option:hover {
   background: #f0f0f0;
 }
 
@@ -390,6 +504,7 @@ dd {
 
 .details-button:focus-visible,
 .node-type-option:focus-visible,
+.surrounding-add:focus-visible,
 .add-button:focus-visible {
   outline: 3px solid rgb(0 0 0 / 22%);
   outline-offset: 3px;
@@ -443,6 +558,10 @@ dd {
 
   .details-card {
     margin-top: 1.5rem;
+  }
+
+  .node-workspace {
+    width: calc(100% - 3.5rem);
   }
 }
 </style>

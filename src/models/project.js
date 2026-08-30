@@ -44,6 +44,10 @@ function createBaseNode(type, node = {}) {
     operation: node.operation ?? '+',
     timing: createTiming(node.timing),
     timeLimit: createTimeLimit(node.timeLimit),
+    relations: {
+      aboveCardId: node.relations?.aboveCardId ?? null,
+      belowCardId: node.relations?.belowCardId ?? null,
+    },
   }
 }
 

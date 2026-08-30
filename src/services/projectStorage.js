@@ -46,6 +46,20 @@ export function getProjects() {
   return readProjectIds().map(getProject).filter(Boolean)
 }
 
+export function updateProject(project) {
+  if (!project?.id) throw new Error('A project ID is required to update a project.')
+
+  const updatedProject = {
+    ...project,
+    updatedAt: new Date().toISOString(),
+  }
+
+  localStorage.setItem(projectStorageKey(project.id), JSON.stringify(updatedProject))
+  addProjectToIndex(project.id)
+
+  return updatedProject
+}
+
 export function addProjectNode(projectId, node) {
   const project = getProject(projectId)
   if (!project) throw new Error(`Project ${projectId} was not found.`)
