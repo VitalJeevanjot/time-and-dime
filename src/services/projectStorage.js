@@ -60,27 +60,92 @@ export function updateProject(project) {
   return updatedProject
 }
 
-export function addProjectNode(projectId, node) {
-  const project = getProject(projectId)
-  if (!project) throw new Error(`Project ${projectId} was not found.`)
-
-  const createNode = node.type === 'value' ? createValueNode : createPercentageNode
+function createUniqueProjectNode(project, node) {
   if (!['value', 'percentage'].includes(node.type)) {
     throw new Error(`Unsupported node type: ${node.type}`)
   }
 
-  let normalizedNode = createNode(node)
+  const createNode = node.type === 'value' ? createValueNode : createPercentageNode
+  const nextNodeIndex =
+    Math.max(
+      project.nodes.length,
+      ...project.nodes.map((projectNode) =>
+        Number.isInteger(projectNode.index) ? projectNode.index : 0,
+      ),
+    ) + 1
+  const nodeWithIndex = {
+    ...node,
+    index: node.index ?? nextNodeIndex,
+  }
+  let normalizedNode = createNode(nodeWithIndex)
   const existingNodeIds = new Set(project.nodes.map((projectNode) => projectNode.id))
   if (existingNodeIds.has(normalizedNode.id)) {
-    normalizedNode = createNode({ ...node, id: undefined })
+    normalizedNode = createNode({ ...nodeWithIndex, id: undefined })
   }
 
+  return normalizedNode
+}
+
+function saveNodes(project, nodes) {
   const updatedProject = {
     ...project,
-    nodes: [...project.nodes, normalizedNode],
+    nodes,
     updatedAt: new Date().toISOString(),
   }
 
-  localStorage.setItem(projectStorageKey(projectId), JSON.stringify(updatedProject))
+  localStorage.setItem(projectStorageKey(project.id), JSON.stringify(updatedProject))
   return updatedProject
+}
+
+export function addProjectNode(projectId, node) {
+  const project = getProject(projectId)
+  if (!project) throw new Error(`Project ${projectId} was not found.`)
+
+  const normalizedNode = createUniqueProjectNode(project, node)
+
+  return saveNodes(project, [...project.nodes, normalizedNode])
+}
+
+export function addProjectNodeAbove(projectId, targetNodeId, node) {
+  const project = getProject(projectId)
+  if (!project) throw new Error(`Project ${projectId} was not found.`)
+
+  const targetIndex = project.nodes.findIndex((projectNode) => projectNode.id === targetNodeId)
+  if (targetIndex === -1) throw new Error(`Node ${targetNodeId} was not found.`)
+
+  const normalizedNode = createUniqueProjectNode(project, node)
+  const targetNode = project.nodes[targetIndex]
+  const previousAboveCardId = targetNode.relations?.aboveCardId ?? null
+  const nodeAbove = {
+    ...normalizedNode,
+    relations: {
+      ...normalizedNode.relations,
+      aboveCardId: previousAboveCardId,
+      belowCardId: targetNode.id,
+    },
+  }
+  const updatedTargetNode = {
+    ...targetNode,
+    relations: {
+      ...targetNode.relations,
+      aboveCardId: nodeAbove.id,
+    },
+  }
+  const nodes = [...project.nodes]
+  const previousAboveIndex = nodes.findIndex(
+    (projectNode) => projectNode.id === previousAboveCardId,
+  )
+  if (previousAboveIndex !== -1) {
+    nodes[previousAboveIndex] = {
+      ...nodes[previousAboveIndex],
+      relations: {
+        ...nodes[previousAboveIndex].relations,
+        belowCardId: nodeAbove.id,
+      },
+    }
+  }
+  nodes[targetIndex] = updatedTargetNode
+  nodes.splice(targetIndex, 0, nodeAbove)
+
+  return saveNodes(project, nodes)
 }

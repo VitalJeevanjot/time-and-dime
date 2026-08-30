@@ -39,6 +39,7 @@ function createTimeLimit(timeLimit = {}) {
 function createBaseNode(type, node = {}) {
   return {
     id: node.id ?? createUuid(),
+    index: node.index ?? 0,
     type,
     details: createNodeDetails(node.details),
     operation: node.operation ?? '+',

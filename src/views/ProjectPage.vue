@@ -3,16 +3,50 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
-import { addProjectNode, getProject, updateProject } from '../services/projectStorage.js'
+import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
+import {
+  addProjectNode,
+  addProjectNodeAbove,
+  getProject,
+  updateProject,
+} from '../services/projectStorage.js'
 
 const route = useRoute()
 const project = ref(null)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
+const nodePickerTargetId = ref(null)
+
+function closeNodePicker() {
+  nodePickerOpen.value = false
+  nodePickerTargetId.value = null
+}
+
+function toggleInitialNodePicker() {
+  if (nodePickerOpen.value && nodePickerTargetId.value === null) {
+    closeNodePicker()
+    return
+  }
+
+  nodePickerTargetId.value = null
+  nodePickerOpen.value = true
+}
+
+function toggleAboveNodePicker(nodeId) {
+  if (nodePickerOpen.value && nodePickerTargetId.value === nodeId) {
+    closeNodePicker()
+    return
+  }
+
+  nodePickerTargetId.value = nodeId
+  nodePickerOpen.value = true
+}
 
 function selectNodeType(nodeType) {
-  project.value = addProjectNode(route.params.id, { type: nodeType })
-  nodePickerOpen.value = false
+  project.value = nodePickerTargetId.value
+    ? addProjectNodeAbove(route.params.id, nodePickerTargetId.value, { type: nodeType })
+    : addProjectNode(route.params.id, { type: nodeType })
+  closeNodePicker()
 }
 
 watch(
@@ -20,6 +54,7 @@ watch(
   (projectId) => {
     project.value = getProject(projectId)
     showDetails.value = false
+    closeNodePicker()
   },
   { immediate: true },
 )
@@ -58,8 +93,8 @@ const formattedCreatedAt = computed(() => {
   <main
     v-if="project"
     class="project-page"
-    @click="nodePickerOpen = false"
-    @keydown.esc="nodePickerOpen = false"
+    @click="closeNodePicker"
+    @keydown.esc="closeNodePicker"
   >
     <header class="project-header">
       <div class="title-area">
@@ -110,74 +145,85 @@ const formattedCreatedAt = computed(() => {
       </dl>
     </aside>
 
-    <section v-if="project.nodes.length" class="node-workspace" aria-label="Project nodes">
-      <div v-for="node in project.nodes" :key="node.id" class="node-shell">
-        <button class="surrounding-add top-add" type="button" aria-label="Add node above">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+    <div v-if="project.nodes.length" class="node-scroller">
+      <section class="node-workspace" aria-label="Project nodes">
+        <div v-for="(node, index) in project.nodes" :key="node.id" class="node-shell">
+          <div
+            v-if="nodePickerOpen && nodePickerTargetId === node.id"
+            class="above-node-picker"
+            @click.stop
+          >
+            <NodeTypePicker @select="selectNodeType" />
+          </div>
 
-        <ValueCard
-          v-if="node.type === 'value'"
-          v-model:operation="node.operation"
-          v-model:name="node.details.name"
-          v-model:description="node.details.description"
-          v-model:value="node.value"
-          v-model:time="node.timing.value"
-          v-model:time-unit="node.timing.unit"
-          v-model:time-limit-enabled="node.timeLimit.enabled"
-          v-model:time-limit="node.timeLimit"
-          :time-limit-type="node.timeLimit.type"
-        />
-        <PercentageCard
-          v-else-if="node.type === 'percentage'"
-          v-model:operation="node.operation"
-          v-model:name="node.details.name"
-          v-model:description="node.details.description"
-          v-model:percentage="node.percentage.value"
-          v-model:value-source="node.percentage.source"
-          v-model:time="node.timing.value"
-          v-model:time-unit="node.timing.unit"
-          v-model:time-limit-enabled="node.timeLimit.enabled"
-          v-model:time-limit="node.timeLimit"
-          :time-limit-type="node.timeLimit.type"
-        />
+          <button
+            class="surrounding-add top-add"
+            type="button"
+            aria-label="Add node above"
+            aria-haspopup="menu"
+            :aria-expanded="nodePickerOpen && nodePickerTargetId === node.id"
+            @click.stop="toggleAboveNodePicker(node.id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
 
-        <button class="surrounding-add right-add" type="button" aria-label="Add node to the right">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
-        <button class="surrounding-add bottom-add" type="button" aria-label="Add node below">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
-      </div>
-    </section>
+          <span
+            class="node-count"
+            :aria-label="`Node ${node.index ?? project.nodes.length - index}`"
+          >
+            {{ node.index ?? project.nodes.length - index }}
+          </span>
+
+          <ValueCard
+            v-if="node.type === 'value'"
+            v-model:operation="node.operation"
+            v-model:name="node.details.name"
+            v-model:description="node.details.description"
+            v-model:value="node.value"
+            v-model:time="node.timing.value"
+            v-model:time-unit="node.timing.unit"
+            v-model:time-limit-enabled="node.timeLimit.enabled"
+            v-model:time-limit="node.timeLimit"
+            :time-limit-type="node.timeLimit.type"
+          />
+          <PercentageCard
+            v-else-if="node.type === 'percentage'"
+            v-model:operation="node.operation"
+            v-model:name="node.details.name"
+            v-model:description="node.details.description"
+            v-model:percentage="node.percentage.value"
+            v-model:value-source="node.percentage.source"
+            v-model:time="node.timing.value"
+            v-model:time-unit="node.timing.unit"
+            v-model:time-limit-enabled="node.timeLimit.enabled"
+            v-model:time-limit="node.timeLimit"
+            :time-limit-type="node.timeLimit.type"
+          />
+
+          <button class="surrounding-add right-add" type="button" aria-label="Add node to the right">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+          <button
+            v-if="node.relations.belowCardId === null"
+            class="surrounding-add bottom-add"
+            type="button"
+            aria-label="Add node below"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
+      </section>
+    </div>
 
     <div v-else class="add-node-control" @click.stop>
-      <div v-if="nodePickerOpen" id="node-type-picker" class="node-type-picker" role="menu">
-        <p>Select node type</p>
-        <button
-          class="node-type-option"
-          type="button"
-          role="menuitem"
-          @click="selectNodeType('percentage')"
-        >
-          <span class="node-type-icon">%</span>
-          <span>Percentage</span>
-        </button>
-        <button
-          class="node-type-option"
-          type="button"
-          role="menuitem"
-          @click="selectNodeType('value')"
-        >
-          <span class="node-type-icon">#</span>
-          <span>Value</span>
-        </button>
+      <div v-if="nodePickerOpen" id="node-type-picker" class="initial-node-picker">
+        <NodeTypePicker @select="selectNodeType" />
       </div>
 
       <button
@@ -186,8 +232,8 @@ const formattedCreatedAt = computed(() => {
         aria-haspopup="menu"
         :aria-expanded="nodePickerOpen"
         aria-controls="node-type-picker"
-        @click="nodePickerOpen = !nodePickerOpen"
-        @keydown.esc="nodePickerOpen = false"
+        @click="toggleInitialNodePicker"
+        @keydown.esc="closeNodePicker"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -208,9 +254,12 @@ const formattedCreatedAt = computed(() => {
 
 <style scoped>
 .project-page {
+  display: flex;
   box-sizing: border-box;
-  min-height: 100dvh;
-  padding: 2rem 2rem 7rem;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.5rem 2rem;
 }
 
 .project-header {
@@ -260,8 +309,8 @@ const formattedCreatedAt = computed(() => {
 
 h1 {
   margin: 0.5rem 0 0;
-  font-size: clamp(2.25rem, 7vw, 4.75rem);
-  letter-spacing: -0.055em;
+  font-size: clamp(1.9rem, 4vw, 3.25rem);
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
 
@@ -339,16 +388,75 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.node-scroller {
+  box-sizing: border-box;
+  width: min(90rem, 100%);
+  min-height: 0;
+  flex: 1;
+  margin: 2rem auto 0;
+  overflow: auto;
+  border: 1px solid #e2e2e2;
+  border-radius: 1.25rem;
+  background: #f7f7f7;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 .node-workspace {
   display: grid;
-  width: min(38rem, calc(100% - 4rem));
-  margin: 5rem auto 2rem;
+  box-sizing: border-box;
+  width: min(42rem, 100%);
+  min-height: 100%;
+  margin-inline: auto;
+  padding: 4.75rem 4rem;
   gap: 7rem;
 }
 
 .node-shell {
   position: relative;
   width: 100%;
+}
+
+.node-shell + .node-shell::before {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 1px;
+  height: 7rem;
+  background: #b8b8b8;
+  content: '';
+  transform: translateX(-50%);
+}
+
+.above-node-picker {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+}
+
+.above-node-picker :deep(.node-type-picker)::after {
+  display: none;
+}
+
+.node-count {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  z-index: 2;
+  display: grid;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  box-sizing: border-box;
+  padding-inline: 0.4rem;
+  border: 1px solid #444444;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 0.75rem;
+  font-weight: 800;
+  place-items: center;
 }
 
 .surrounding-add {
@@ -407,73 +515,11 @@ dd {
   transform: translateX(-50%);
 }
 
-.node-type-picker {
+.initial-node-picker {
   position: absolute;
   bottom: calc(100% + 0.75rem);
   left: 50%;
-  display: grid;
-  box-sizing: border-box;
-  width: 14rem;
-  gap: 0.4rem;
-  padding: 0.65rem;
-  border: 1px solid #d8d8d8;
-  border-radius: 0.9rem;
-  background: #ffffff;
-  box-shadow: 0 0.8rem 2.25rem rgb(0 0 0 / 16%);
   transform: translateX(-50%);
-}
-
-.node-type-picker::after {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-right: 1px solid #d8d8d8;
-  border-bottom: 1px solid #d8d8d8;
-  background: #ffffff;
-  content: '';
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.node-type-picker p {
-  margin: 0;
-  padding: 0.35rem 0.45rem 0.2rem;
-  color: #6a6a6a;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.node-type-option {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem;
-  border: 0;
-  border-radius: 0.65rem;
-  background: transparent;
-  color: #181818;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  text-align: left;
-}
-
-.node-type-option:hover {
-  background: #f0f0f0;
-}
-
-.node-type-icon {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.55rem;
-  background: #181818;
-  color: #ffffff;
-  font-size: 1rem;
-  place-items: center;
 }
 
 .add-button {
@@ -503,7 +549,6 @@ dd {
 }
 
 .details-button:focus-visible,
-.node-type-option:focus-visible,
 .surrounding-add:focus-visible,
 .add-button:focus-visible {
   outline: 3px solid rgb(0 0 0 / 22%);
@@ -538,7 +583,7 @@ dd {
 
 @media (max-width: 44rem) {
   .project-page {
-    padding: 1.25rem 1rem 7rem;
+    padding: 1rem;
   }
 
   .project-header,
@@ -561,7 +606,7 @@ dd {
   }
 
   .node-workspace {
-    width: calc(100% - 3.5rem);
+    padding-inline: 3.5rem;
   }
 }
 </style>
