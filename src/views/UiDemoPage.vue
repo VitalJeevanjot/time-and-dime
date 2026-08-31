@@ -5,6 +5,7 @@ import ValueCard from '../components/ValueCard.vue'
 
 const valueCardName = ref('')
 const valueCardDescription = ref('')
+const valueCardReferenceValue = ref(0)
 const valueCardValue = ref(0)
 const valueCardTime = ref(0)
 const valueCardTimeUnit = ref('Seconds')
@@ -72,6 +73,7 @@ const percentageCardTimeLimit = ref({
         v-model:operation="valueCardOperation"
         v-model:name="valueCardName"
         v-model:description="valueCardDescription"
+        v-model:reference-value="valueCardReferenceValue"
         v-model:value="valueCardValue"
         v-model:time="valueCardTime"
         v-model:time-unit="valueCardTimeUnit"

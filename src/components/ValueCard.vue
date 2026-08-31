@@ -13,6 +13,7 @@ defineProps({
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
+const referenceValue = defineModel('referenceValue', { type: Number, default: 0 })
 const value = defineModel('value', { type: Number, default: 0 })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
@@ -51,6 +52,17 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
 <template>
   <article class="value-card">
     <OperationPicker v-model="operation" />
+
+    <label class="field">
+      <span>Reference Value</span>
+      <input
+        v-model.number="referenceValue"
+        name="referenceValue"
+        type="number"
+        step="1"
+        @change="referenceValue = toInteger(referenceValue)"
+      />
+    </label>
 
     <label class="field">
       <span>Value</span>

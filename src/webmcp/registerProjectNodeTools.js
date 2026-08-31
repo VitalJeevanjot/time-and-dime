@@ -8,6 +8,7 @@ const editableFields = [
   'operation',
   'details.name',
   'details.description',
+  'referenceValue',
   'value',
   'percentage.value',
   'timing.value',
@@ -167,6 +168,10 @@ function updateNodeField(node, projectMode, field, value) {
   if (field === 'value') {
     if (node.type !== 'value') throw new Error('value is only editable on a Value node.')
     return { ...node, value: integerValue(value, field) }
+  }
+  if (field === 'referenceValue') {
+    if (node.type !== 'value') throw new Error('referenceValue is only editable on a Value node.')
+    return { ...node, referenceValue: integerValue(value, field) }
   }
   if (field === 'percentage.value') {
     if (node.type !== 'percentage') {

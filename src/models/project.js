@@ -59,6 +59,7 @@ function createBaseNode(type, node = {}) {
 export function createValueNode(node = {}) {
   return {
     ...createBaseNode('value', node),
+    referenceValue: node.referenceValue ?? 0,
     value: node.value ?? 0,
   }
 }
