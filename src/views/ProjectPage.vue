@@ -932,6 +932,8 @@ dd {
 }
 
 .node-level-track {
+  position: relative;
+  z-index: 1;
   display: flex;
   margin-block: -4rem;
   gap: 2rem;
@@ -979,6 +981,7 @@ dd {
   position: absolute;
   top: -8rem;
   left: 50%;
+  z-index: 0;
   width: 1px;
   height: 4.4rem;
   background: #b8b8b8;
