@@ -1,9 +1,10 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
 import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
+import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
 import {
   addProjectNode,
   addProjectNodeAbove,
@@ -17,6 +18,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const webMcpController = new AbortController()
 const project = ref(null)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
@@ -127,6 +129,16 @@ function logStoredNode(nodeId) {
   }
 }
 
+function getStoredProjectInfo() {
+  const storedProject = getProject(route.params.id)
+  if (!storedProject) throw new Error(`Project ${route.params.id} was not found.`)
+
+  return {
+    ...storedProject,
+    nodeCount: Array.isArray(storedProject.nodes) ? storedProject.nodes.length : 0,
+  }
+}
+
 watch(
   () => route.params.id,
   (projectId) => {
@@ -145,6 +157,53 @@ watch(
   },
   { deep: true },
 )
+
+onMounted(async () => {
+  if (!document.modelContext?.registerTool) return
+
+  try {
+    await document.modelContext.registerTool(
+      {
+        name: 'get_project_info',
+        description:
+          'Fetch the complete stored information for the currently open Time&Dime project, including its settings, node count, and structured node data.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => JSON.stringify(getStoredProjectInfo(), null, 2),
+        annotations: {
+          readOnlyHint: true,
+          untrustedContentHint: true,
+        },
+      },
+      { signal: webMcpController.signal },
+    )
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP get-project-info tool.', error)
+    }
+  }
+
+  try {
+    await registerCreateValueNodeTool({
+      getProjectId: () => String(route.params.id),
+      onProjectUpdated: (updatedProject) => {
+        project.value = updatedProject
+      },
+      signal: webMcpController.signal,
+    })
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP create-value-node tool.', error)
+    }
+  }
+})
+
+onUnmounted(() => {
+  webMcpController.abort()
+})
 
 const formattedEndTime = computed(() => {
   if (!project.value) return ''
@@ -227,6 +286,7 @@ const nodeLevels = computed(() => {
           class="details-button"
           type="button"
           :aria-expanded="showDetails"
+          aria-controls="project-details-popup"
           @click="showDetails = !showDetails"
         >
           {{ showDetails ? 'Hide info' : 'Show info' }}
@@ -237,7 +297,24 @@ const nodeLevels = computed(() => {
       </div>
     </header>
 
-    <aside v-if="showDetails" class="details-card">
+    <aside
+      v-if="showDetails"
+      id="project-details-popup"
+      class="details-card"
+      role="dialog"
+      aria-label="Project information"
+    >
+      <button
+        class="close-details-button"
+        type="button"
+        aria-label="Close project information"
+        @click="showDetails = false"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m7 7 10 10M17 7 7 17" />
+        </svg>
+      </button>
+
       <h2>Project information</h2>
       <dl>
         <div>
@@ -259,6 +336,10 @@ const nodeLevels = computed(() => {
         <div>
           <dt>Created</dt>
           <dd>{{ formattedCreatedAt }}</dd>
+        </div>
+        <div>
+          <dt>Nodes created</dt>
+          <dd>{{ project.nodes.length }}</dd>
         </div>
       </dl>
     </aside>
@@ -541,18 +622,58 @@ h1 {
 }
 
 .details-card {
+  position: fixed;
+  top: 5.75rem;
+  right: max(2rem, calc((100vw - 90rem) / 2));
+  z-index: 20;
   box-sizing: border-box;
-  width: min(28rem, 100%);
-  margin: 2rem max(0rem, calc((100% - 90rem) / 2)) 0 auto;
+  width: min(28rem, calc(100vw - 4rem));
+  max-height: calc(100dvh - 7.75rem);
+  margin: 0;
   padding: 1.5rem;
+  overflow-y: auto;
   border: 1px solid #dedede;
   border-radius: 1rem;
   background: #ffffff;
-  box-shadow: 0 0.6rem 2rem rgb(0 0 0 / 8%);
+  box-shadow: 0 0.8rem 2.5rem rgb(0 0 0 / 16%);
 }
 
 .details-card h2 {
   margin: 0 0 1.25rem;
+  padding-right: 2rem;
+}
+
+.close-details-button {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #777777;
+  cursor: pointer;
+  place-items: center;
+}
+
+.close-details-button:hover {
+  background: #eeeeee;
+  color: #222222;
+}
+
+.close-details-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.close-details-button path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
 }
 
 dl,
@@ -598,7 +719,7 @@ dd {
 .node-workspace {
   display: grid;
   box-sizing: border-box;
-  width: min(78rem, 100%);
+  width: min(86rem, 100%);
   min-height: 100%;
   margin-inline: auto;
   padding-block: 4.75rem;
@@ -830,6 +951,7 @@ dd {
 }
 
 .details-button:focus-visible,
+.close-details-button:focus-visible,
 .delete-project-button:focus-visible,
 .delete-node-button:focus-visible,
 .surrounding-add:focus-visible,
@@ -885,7 +1007,10 @@ dd {
   }
 
   .details-card {
-    margin-top: 1.5rem;
+    top: 1rem;
+    right: 1rem;
+    width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
   }
 
 }
