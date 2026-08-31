@@ -187,6 +187,61 @@ export function addProjectNodeAbove(projectId, targetNodeId, node) {
   return saveNodes(project, nodes)
 }
 
+export function addProjectNodeBelow(projectId, targetNodeId, node) {
+  const project = getProject(projectId)
+  if (!project) throw new Error(`Project ${projectId} was not found.`)
+
+  const targetIndex = project.nodes.findIndex((projectNode) => projectNode.id === targetNodeId)
+  if (targetIndex === -1) throw new Error(`Node ${targetNodeId} was not found.`)
+
+  const targetNode = project.nodes[targetIndex]
+  const normalizedNode = createUniqueProjectNode(project, node)
+  const targetLevelNodeIds = project.nodes
+    .filter((projectNode) => nodesShareLevel(projectNode, targetNode))
+    .map((projectNode) => projectNode.id)
+  const targetLevelIdSet = new Set(targetLevelNodeIds)
+  const previousBelowCardIds = relationIds(targetNode, 'belowCardIds')
+  const previousBelowIdSet = new Set(previousBelowCardIds)
+  const nodeBelow = {
+    ...normalizedNode,
+    relations: {
+      ...normalizedNode.relations,
+      aboveCardIds: targetLevelNodeIds,
+      belowCardIds: previousBelowCardIds,
+    },
+  }
+  const nodes = project.nodes.map((projectNode) => {
+    if (targetLevelIdSet.has(projectNode.id)) {
+      return {
+        ...projectNode,
+        relations: {
+          ...projectNode.relations,
+          belowCardIds: [nodeBelow.id],
+        },
+      }
+    }
+
+    if (previousBelowIdSet.has(projectNode.id)) {
+      return {
+        ...projectNode,
+        relations: {
+          ...projectNode.relations,
+          aboveCardIds: [nodeBelow.id],
+        },
+      }
+    }
+
+    return projectNode
+  })
+  const targetLevelIndexes = nodes
+    .map((projectNode, index) => (targetLevelIdSet.has(projectNode.id) ? index : -1))
+    .filter((index) => index !== -1)
+  const insertionIndex = Math.max(...targetLevelIndexes) + 1
+  nodes.splice(insertionIndex, 0, nodeBelow)
+
+  return saveNodes(project, nodes)
+}
+
 export function addProjectNodeRight(projectId, targetNodeId, node) {
   const project = getProject(projectId)
   if (!project) throw new Error(`Project ${projectId} was not found.`)

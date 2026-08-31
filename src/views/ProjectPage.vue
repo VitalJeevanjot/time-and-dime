@@ -7,6 +7,7 @@ import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
 import {
   addProjectNode,
   addProjectNodeAbove,
+  addProjectNodeBelow,
   addProjectNodeRight,
   deleteProject,
   deleteProjectNode,
@@ -69,6 +70,21 @@ function toggleRightNodePicker(nodeId) {
   nodePickerOpen.value = true
 }
 
+function toggleBelowNodePicker(nodeId) {
+  if (
+    nodePickerOpen.value &&
+    nodePickerTargetId.value === nodeId &&
+    nodePickerDirection.value === 'below'
+  ) {
+    closeNodePicker()
+    return
+  }
+
+  nodePickerTargetId.value = nodeId
+  nodePickerDirection.value = 'below'
+  nodePickerOpen.value = true
+}
+
 function selectNodeType(nodeType) {
   const nodeDetails = {
     type: nodeType,
@@ -79,6 +95,8 @@ function selectNodeType(nodeType) {
 
   if (nodePickerDirection.value === 'right') {
     project.value = addProjectNodeRight(route.params.id, nodePickerTargetId.value, nodeDetails)
+  } else if (nodePickerDirection.value === 'below') {
+    project.value = addProjectNodeBelow(route.params.id, nodePickerTargetId.value, nodeDetails)
   } else if (nodePickerDirection.value === 'above') {
     project.value = addProjectNodeAbove(route.params.id, nodePickerTargetId.value, nodeDetails)
   } else {
@@ -238,9 +256,13 @@ const nodeLevels = computed(() => {
             v-if="
               nodePickerOpen &&
               nodePickerTargetId === level.nodes[0].id &&
-              nodePickerDirection === 'above'
+              ['above', 'below'].includes(nodePickerDirection)
             "
             class="level-node-picker"
+            :class="{
+              'above-level-picker': nodePickerDirection === 'above',
+              'below-level-picker': nodePickerDirection === 'below',
+            }"
             @click.stop
           >
             <NodeTypePicker @select="selectNodeType" />
@@ -339,18 +361,26 @@ const nodeLevels = computed(() => {
                   <path d="M12 5v14M5 12h14" />
                 </svg>
               </button>
-              <button
-                v-if="node.index === 1"
-                class="surrounding-add bottom-add"
-                type="button"
-                aria-label="Add node below"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
             </div>
           </div>
+
+          <button
+            v-if="(level.nodes[0].relations?.belowCardIds?.length ?? 0) === 0"
+            class="surrounding-add bottom-add"
+            type="button"
+            aria-label="Add node below this level"
+            aria-haspopup="menu"
+            :aria-expanded="
+              nodePickerOpen &&
+              nodePickerTargetId === level.nodes[0].id &&
+              nodePickerDirection === 'below'
+            "
+            @click.stop="toggleBelowNodePicker(level.nodes[0].id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
         </div>
       </section>
     </div>
@@ -585,6 +615,8 @@ dd {
 .node-level-track.has-horizontal-scroll {
   overflow-x: auto;
   overflow-y: hidden;
+  border-radius: 1rem;
+  background: #ededed;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
   scrollbar-color: #888888 #dedede;
@@ -635,10 +667,17 @@ dd {
 
 .level-node-picker {
   position: absolute;
-  top: 0.75rem;
   left: 50%;
   z-index: 5;
   transform: translateX(-50%);
+}
+
+.above-level-picker {
+  top: 0.75rem;
+}
+
+.below-level-picker {
+  bottom: 0.75rem;
 }
 
 .card-node-picker :deep(.node-type-picker)::after,
