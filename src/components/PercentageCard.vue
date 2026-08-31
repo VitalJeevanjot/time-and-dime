@@ -129,11 +129,18 @@ function toNonNegativeInteger(input) {
   flex-direction: column;
   gap: 1rem;
   padding: 1.75rem;
-  border: 1px solid #292929;
+  border: 1px solid #1d3a2a;
   border-radius: 0.75rem;
-  background: #0a0a0a;
-  box-shadow: 0 0.6rem 1.75rem rgb(0 0 0 / 20%);
-  color: #f5f5f5;
+  background:
+    radial-gradient(circle at 20% 10%, rgb(43 139 87 / 14%), transparent 28%),
+    radial-gradient(circle at 84% 90%, rgb(10 78 42 / 22%), transparent 38%),
+    radial-gradient(circle at 48% 42%, #0a160f 0%, #050c08 58%, #010302 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(159 235 190 / 6%),
+    inset -1.75rem -1.75rem 3.25rem rgb(0 0 0 / 34%),
+    0 0.7rem 2rem rgb(0 16 8 / 34%),
+    0 0 1.75rem rgb(12 82 43 / 7%);
+  color: #edf7f0;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -142,7 +149,7 @@ function toNonNegativeInteger(input) {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.32rem;
   font-weight: 600;
 }
 
@@ -151,25 +158,27 @@ textarea,
 select {
   box-sizing: border-box;
   width: 100%;
-  padding: 0.95rem;
-  border: 1px solid #3a3a3a;
-  border-radius: 0.4rem;
-  background: #181818;
-  color: #f5f5f5;
+  padding: 0.68rem 0.82rem;
+  border: 1px solid #203d2d;
+  border-radius: 0.55rem;
+  background: rgb(4 13 8 / 92%);
+  box-shadow: inset 0 1px 0 rgb(151 224 181 / 7%);
+  color: #edf7f0;
   font: inherit;
+  font-size: 0.94rem;
   font-weight: 400;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #8c8c8c;
+  color: #6f8878;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #737373;
-  outline: 2px solid rgb(255 255 255 / 16%);
+  border-color: #397555;
+  outline: 2px solid rgb(69 166 108 / 17%);
   outline-offset: 1px;
 }
 
@@ -190,7 +199,7 @@ textarea {
   position: absolute;
   top: 50%;
   right: 1rem;
-  color: #a0a0a0;
+  color: #72907f;
   font-weight: 400;
   transform: translateY(-50%);
 }
@@ -230,9 +239,9 @@ textarea {
   box-sizing: border-box;
   align-items: center;
   padding: 0.18rem;
-  border: 1px solid #4a4a4a;
+  border: 1px solid #294d38;
   border-radius: 999px;
-  background: #222222;
+  background: #0b1b12;
   transition: background 160ms ease;
 }
 
@@ -240,22 +249,52 @@ textarea {
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background: #a0a0a0;
+  background: #688376;
   transition: transform 160ms ease, background 160ms ease;
 }
 
 .switch-label input:checked + .switch-track {
-  background: #f5f5f5;
+  background: #5aba82;
 }
 
 .switch-label input:checked + .switch-track .switch-thumb {
-  background: #111111;
+  background: #050c08;
   transform: translateX(1.32rem);
 }
 
 .switch-label input:focus-visible + .switch-track {
-  outline: 2px solid #8a8a8a;
+  outline: 2px solid #478862;
   outline-offset: 2px;
+}
+
+.percentage-card :deep(.operation-picker select) {
+  padding: 0.78rem 0.9rem;
+  border-width: 1px;
+  border-radius: 0.55rem;
+  border-color: #294d38;
+  background: rgb(4 13 8 / 92%);
+  box-shadow: inset 0 1px 0 rgb(151 224 181 / 7%);
+  color: #edf7f0;
+}
+
+.percentage-card :deep(.operation-picker select:focus) {
+  border-color: #397555;
+  outline-color: rgb(69 166 108 / 17%);
+}
+
+.percentage-card :deep(.time-limit) {
+  border-color: #203d2d;
+  background: rgb(3 10 6 / 78%);
+}
+
+.percentage-card :deep(.time-limit input),
+.percentage-card :deep(.time-limit select) {
+  padding: 0.68rem 0.78rem;
+  border-radius: 0.5rem;
+  border-color: #203d2d;
+  background: #07120b;
+  box-shadow: inset 0 1px 0 rgb(151 224 181 / 7%);
+  color: #edf7f0;
 }
 
 @media (max-width: 28rem) {

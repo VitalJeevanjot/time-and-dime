@@ -54,17 +54,6 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
     <OperationPicker v-model="operation" />
 
     <label class="field">
-      <span>Reference Value</span>
-      <input
-        v-model.number="referenceValue"
-        name="referenceValue"
-        type="number"
-        step="1"
-        @change="referenceValue = toInteger(referenceValue)"
-      />
-    </label>
-
-    <label class="field">
       <span>Value</span>
       <input
         v-model.number="value"
@@ -72,6 +61,17 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
         type="number"
         step="1"
         @change="value = toInteger(value)"
+      />
+    </label>
+
+    <label class="field">
+      <span>Reference Value</span>
+      <input
+        v-model.number="referenceValue"
+        name="referenceValue"
+        type="number"
+        step="1"
+        @change="referenceValue = toInteger(referenceValue)"
       />
     </label>
 
@@ -132,11 +132,11 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
   flex-direction: column;
   gap: 1rem;
   padding: 1.75rem;
-  border: 1px solid #292929;
+  border: 1px solid #ffb46d;
   border-radius: 0.75rem;
-  background: #0a0a0a;
-  box-shadow: 0 0.6rem 1.75rem rgb(0 0 0 / 20%);
-  color: #f5f5f5;
+  background: #f28a2a;
+  box-shadow: 0 0.7rem 2rem rgb(210 101 18 / 24%);
+  color: #fffaf4;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -145,7 +145,7 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.32rem;
   font-weight: 600;
 }
 
@@ -154,25 +154,27 @@ textarea,
 select {
   box-sizing: border-box;
   width: 100%;
-  padding: 0.95rem;
-  border: 1px solid #3a3a3a;
-  border-radius: 0.4rem;
-  background: #181818;
-  color: #f5f5f5;
+  padding: 0.68rem 0.82rem;
+  border: 1px solid #f0d4bd;
+  border-radius: 0.55rem;
+  background: rgb(255 249 243 / 97%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%);
+  color: #5b2500;
   font: inherit;
+  font-size: 0.94rem;
   font-weight: 400;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #8c8c8c;
+  color: #aa8061;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #737373;
-  outline: 2px solid rgb(255 255 255 / 16%);
+  border-color: #fff1e1;
+  outline: 2px solid rgb(255 244 232 / 52%);
   outline-offset: 1px;
 }
 
@@ -215,9 +217,9 @@ textarea {
   box-sizing: border-box;
   align-items: center;
   padding: 0.18rem;
-  border: 1px solid #4a4a4a;
+  border: 1px solid #f5d2af;
   border-radius: 999px;
-  background: #222222;
+  background: #eaae75;
   transition: background 160ms ease;
 }
 
@@ -225,22 +227,52 @@ textarea {
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background: #a0a0a0;
+  background: #fff0df;
   transition: transform 160ms ease, background 160ms ease;
 }
 
 .switch-label input:checked + .switch-track {
-  background: #f5f5f5;
+  background: #f4d1ae;
 }
 
 .switch-label input:checked + .switch-track .switch-thumb {
-  background: #111111;
+  background: #a95d28;
   transform: translateX(1.32rem);
 }
 
 .switch-label input:focus-visible + .switch-track {
-  outline: 2px solid #8a8a8a;
+  outline: 2px solid #fff1e1;
   outline-offset: 2px;
+}
+
+.value-card :deep(.operation-picker select) {
+  padding: 0.78rem 0.9rem;
+  border-width: 1px;
+  border-radius: 0.55rem;
+  border-color: #f0d4bd;
+  background: rgb(255 249 243 / 97%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%);
+  color: #5b2500;
+}
+
+.value-card :deep(.operation-picker select:focus) {
+  border-color: #fff1e1;
+  outline-color: rgb(255 244 232 / 52%);
+}
+
+.value-card :deep(.time-limit) {
+  border-color: #ffb46d;
+  background: rgb(244 126 31 / 90%);
+}
+
+.value-card :deep(.time-limit input),
+.value-card :deep(.time-limit select) {
+  padding: 0.68rem 0.78rem;
+  border-radius: 0.5rem;
+  border-color: #f0d4bd;
+  background: #fff9f3;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%);
+  color: #5b2500;
 }
 
 @media (max-width: 28rem) {
