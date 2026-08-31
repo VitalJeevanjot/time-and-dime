@@ -78,6 +78,12 @@ export function createProjectRecord(project = {}) {
     id: project.id ?? createUuid(),
     name: project.name ?? '',
     description: project.description ?? '',
+    startTime: {
+      date: project.startTime?.date ?? '',
+      hours: project.startTime?.hours ?? '00',
+      minutes: project.startTime?.minutes ?? '00',
+      seconds: project.startTime?.seconds ?? '00',
+    },
     endTime: {
       mode: project.endTime?.mode ?? 'duration',
       duration: project.endTime?.duration ?? 0,

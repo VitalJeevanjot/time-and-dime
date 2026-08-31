@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import EndTimePicker from '../components/shared/EndTimePicker.vue'
+import StartTimePicker from '../components/shared/StartTimePicker.vue'
 import { saveProject } from '../services/projectStorage.js'
 
 const router = useRouter()
@@ -11,6 +12,10 @@ const endTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Mo
 const name = ref('')
 const description = ref('')
 const endTimeMode = ref('duration')
+const startDate = ref('')
+const startHours = ref('00')
+const startMinutes = ref('00')
+const startSeconds = ref('00')
 const endDuration = ref(0)
 const endDurationUnit = ref('Seconds')
 const endDate = ref('')
@@ -32,6 +37,12 @@ function normalizeProjectInput(input) {
   return {
     name: String(input.name ?? '').trim(),
     description: String(input.description ?? '').trim(),
+    startTime: {
+      date: String(input.startDate ?? ''),
+      hours: normalizeClockPart(input.startHours, 23),
+      minutes: normalizeClockPart(input.startMinutes, 59),
+      seconds: normalizeClockPart(input.startSeconds, 59),
+    },
     endTime: {
       mode,
       duration: Number.isFinite(duration) ? Math.max(0, Math.trunc(duration)) : 0,
@@ -51,6 +62,10 @@ function getFormProjectInput() {
     name: name.value,
     description: description.value,
     endTimeMode: endTimeMode.value,
+    startDate: startDate.value,
+    startHours: startHours.value,
+    startMinutes: startMinutes.value,
+    startSeconds: startSeconds.value,
     endDuration: endDuration.value,
     endDurationUnit: endDurationUnit.value,
     endDate: endDate.value,
@@ -64,6 +79,10 @@ function applyProjectInput(projectDetails) {
   name.value = projectDetails.name
   description.value = projectDetails.description
   endTimeMode.value = projectDetails.endTime.mode
+  startDate.value = projectDetails.startTime.date
+  startHours.value = projectDetails.startTime.hours
+  startMinutes.value = projectDetails.startTime.minutes
+  startSeconds.value = projectDetails.startTime.seconds
   endDuration.value = projectDetails.endTime.duration
   endDurationUnit.value = projectDetails.endTime.durationUnit
   endDate.value = projectDetails.endTime.date
@@ -74,6 +93,9 @@ function applyProjectInput(projectDetails) {
 
 function createProject(projectDetails) {
   if (!projectDetails.name) throw new Error('A project name is required.')
+  if (projectDetails.endTime.mode === 'dateTime' && !projectDetails.startTime.date) {
+    throw new Error('A start date is required for Date & time projects.')
+  }
   if (projectDetails.endTime.mode === 'dateTime' && !projectDetails.endTime.date) {
     throw new Error('An end date is required for Date & time projects.')
   }
@@ -104,7 +126,7 @@ onMounted(async () => {
       {
         name: 'create_project',
         description:
-          'Create a Time&Dime project, store it locally, and open its project page. Provide either a duration or an exact date and 24-hour time for the project end time.',
+          'Create a Time&Dime project, store it locally, and open its project page. Duration projects need an end duration. Date-time projects need exact start and end dates with 24-hour times.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -121,6 +143,29 @@ onMounted(async () => {
               type: 'string',
               enum: ['duration', 'dateTime'],
               description: 'Whether the project ends after a duration or at an exact date and time.',
+            },
+            startDate: {
+              type: 'string',
+              format: 'date',
+              description: 'Start date in YYYY-MM-DD format. Used when endTimeMode is dateTime.',
+            },
+            startHours: {
+              type: 'integer',
+              minimum: 0,
+              maximum: 23,
+              description: 'Start hour in 24-hour time. Used when endTimeMode is dateTime.',
+            },
+            startMinutes: {
+              type: 'integer',
+              minimum: 0,
+              maximum: 59,
+              description: 'Start minute. Used when endTimeMode is dateTime.',
+            },
+            startSeconds: {
+              type: 'integer',
+              minimum: 0,
+              maximum: 59,
+              description: 'Start second. Used when endTimeMode is dateTime.',
             },
             endDuration: {
               type: 'integer',
@@ -157,6 +202,29 @@ onMounted(async () => {
             },
           },
           required: ['name', 'endTimeMode'],
+          oneOf: [
+            {
+              properties: {
+                endTimeMode: { const: 'duration' },
+              },
+              required: ['endDuration', 'endDurationUnit'],
+            },
+            {
+              properties: {
+                endTimeMode: { const: 'dateTime' },
+              },
+              required: [
+                'startDate',
+                'startHours',
+                'startMinutes',
+                'startSeconds',
+                'endDate',
+                'endHours',
+                'endMinutes',
+                'endSeconds',
+              ],
+            },
+          ],
           additionalProperties: false,
         },
         execute: (input) => {
@@ -218,6 +286,14 @@ onUnmounted(() => {
         v-model:hours="endHours"
         v-model:minutes="endMinutes"
         v-model:seconds="endSeconds"
+      />
+
+      <StartTimePicker
+        v-if="endTimeMode === 'dateTime'"
+        v-model:date="startDate"
+        v-model:hours="startHours"
+        v-model:minutes="startMinutes"
+        v-model:seconds="startSeconds"
       />
 
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>

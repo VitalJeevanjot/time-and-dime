@@ -158,6 +158,16 @@ const formattedEndTime = computed(() => {
   return `${date} at ${endTime.hours}:${endTime.minutes}:${endTime.seconds}`
 })
 
+const formattedStartTime = computed(() => {
+  if (!project.value || project.value.endTime.mode !== 'dateTime') return ''
+
+  const startTime = project.value.startTime
+  if (!startTime) return 'No start time selected'
+
+  const date = startTime.date || 'No date selected'
+  return `${date} at ${startTime.hours}:${startTime.minutes}:${startTime.seconds}`
+})
+
 const formattedCreatedAt = computed(() => {
   if (!project.value?.createdAt) return ''
   return new Intl.DateTimeFormat(undefined, {
@@ -237,6 +247,10 @@ const nodeLevels = computed(() => {
         <div>
           <dt>End-time type</dt>
           <dd>{{ project.endTime.mode === 'duration' ? 'Duration' : 'Date & time' }}</dd>
+        </div>
+        <div v-if="project.endTime.mode === 'dateTime'">
+          <dt>Start time</dt>
+          <dd>{{ formattedStartTime }}</dd>
         </div>
         <div>
           <dt>End time</dt>
