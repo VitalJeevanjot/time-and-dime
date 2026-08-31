@@ -344,9 +344,19 @@ const nodeLevels = computed(() => {
       </div>
 
       <div class="header-actions">
-        <div class="end-time-summary">
-          <span>End time</span>
-          <strong>{{ formattedEndTime }}</strong>
+        <div class="interval-summary">
+          <span class="interval-summary-label">Interval</span>
+          <strong v-if="project.endTime.mode === 'duration'">{{ formattedEndTime }}</strong>
+          <div v-else class="date-time-interval">
+            <p class="date-time-boundary">
+              <span>Start</span>
+              <strong>{{ formattedStartTime }}</strong>
+            </p>
+            <p class="date-time-boundary">
+              <span>End</span>
+              <strong>{{ formattedEndTime }}</strong>
+            </p>
+          </div>
         </div>
         <button
           class="details-button"
@@ -388,7 +398,7 @@ const nodeLevels = computed(() => {
           <dd>{{ project.description || 'No description provided.' }}</dd>
         </div>
         <div>
-          <dt>End-time type</dt>
+          <dt>Interval Type</dt>
           <dd>{{ project.endTime.mode === 'duration' ? 'Duration' : 'Date & time' }}</dd>
         </div>
         <div v-if="project.endTime.mode === 'dateTime'">
@@ -645,7 +655,7 @@ h1 {
   gap: 1rem;
 }
 
-.end-time-summary {
+.interval-summary {
   display: flex;
   min-width: 12rem;
   flex-direction: column;
@@ -654,11 +664,31 @@ h1 {
   text-align: right;
 }
 
-.end-time-summary span {
+.interval-summary-label {
   color: #6a6a6a;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.date-time-interval {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.date-time-boundary {
+  display: grid;
+  grid-template-columns: 2.75rem auto;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.date-time-boundary span {
+  color: #6a6a6a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -1067,7 +1097,7 @@ dd {
     gap: 0.75rem;
   }
 
-  .end-time-summary {
+  .interval-summary {
     align-items: start;
     text-align: left;
   }
