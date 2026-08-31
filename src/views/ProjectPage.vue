@@ -5,6 +5,7 @@ import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
 import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
 import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
+import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
 import {
   addProjectNode,
   addProjectNodeAbove,
@@ -263,6 +264,20 @@ onMounted(async () => {
   } catch (error) {
     if (!webMcpController.signal.aborted) {
       console.warn('Could not register the WebMCP create-value-node tool.', error)
+    }
+  }
+
+  try {
+    await registerProjectNodeTools({
+      getProjectId: () => String(route.params.id),
+      onProjectUpdated: (updatedProject) => {
+        project.value = updatedProject
+      },
+      signal: webMcpController.signal,
+    })
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP project-node tools.', error)
     }
   }
 })
