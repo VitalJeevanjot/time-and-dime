@@ -137,7 +137,6 @@ function createPercentageNodeInput(input, project) {
     operation: requiredEnum(input.operation, operations, 'operation'),
     percentage: {
       value: requiredPercentage(input.percentage),
-      source: requiredEnum(input.valueSource, ['Original', 'Current'], 'valueSource'),
     },
     timing: {
       value: requiredInteger(input.time, 'time', 0),
@@ -213,11 +212,6 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             maximum: 100,
             description: 'Required percentage from 0 through 100.',
           },
-          valueSource: {
-            type: 'string',
-            enum: ['Original', 'Current'],
-            description: 'Required value source used by the Percentage node.',
-          },
           time: {
             type: 'integer',
             minimum: 0,
@@ -262,7 +256,6 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           'side',
           'operation',
           'percentage',
-          'valueSource',
           'time',
           'timeUnit',
           'name',

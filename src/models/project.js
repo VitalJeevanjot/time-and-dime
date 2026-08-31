@@ -68,7 +68,6 @@ export function createPercentageNode(node = {}) {
     ...createBaseNode('percentage', node),
     percentage: {
       value: node.percentage?.value ?? 0,
-      source: node.percentage?.source ?? 'Original',
     },
   }
 }

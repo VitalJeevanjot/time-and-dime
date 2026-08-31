@@ -10,7 +10,6 @@ const editableFields = [
   'details.description',
   'value',
   'percentage.value',
-  'percentage.source',
   'timing.value',
   'timing.unit',
   'timeLimit.enabled',
@@ -176,15 +175,6 @@ function updateNodeField(node, projectMode, field, value) {
     return {
       ...node,
       percentage: { ...node.percentage, value: numberValue(value, field, 0, 100) },
-    }
-  }
-  if (field === 'percentage.source') {
-    if (node.type !== 'percentage') {
-      throw new Error('percentage.source is only editable on a Percentage node.')
-    }
-    return {
-      ...node,
-      percentage: { ...node.percentage, source: enumValue(value, ['Original', 'Current'], field) },
     }
   }
   if (field === 'timing.value') {

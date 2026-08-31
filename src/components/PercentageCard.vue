@@ -14,7 +14,6 @@ const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
 const percentage = defineModel('percentage', { type: Number, default: 0 })
-const valueSource = defineModel('valueSource', { type: String, default: 'Original' })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
 const timeLimitEnabled = defineModel('timeLimitEnabled', { type: Boolean, default: false })
@@ -57,21 +56,7 @@ function toNonNegativeInteger(input) {
   <article class="percentage-card">
     <OperationPicker v-model="operation" />
 
-     <fieldset class="field source-field">
-      <legend>Value source</legend>
-      <div class="source-toggle">
-        <label :class="['source-option', { active: valueSource === 'Original' }]">
-          <input v-model="valueSource" name="valueSource" type="radio" value="Original" />
-          <span>Original</span>
-        </label>
-        <label :class="['source-option', { active: valueSource === 'Current' }]">
-          <input v-model="valueSource" name="valueSource" type="radio" value="Current" />
-          <span>Current</span>
-        </label>
-      </div>
-    </fieldset>
-
-     <label class="field">
+    <label class="field">
       <span>Percentage</span>
       <span class="percentage-input">
         <input
@@ -208,52 +193,6 @@ textarea {
   color: #a0a0a0;
   font-weight: 400;
   transform: translateY(-50%);
-}
-
-.source-field {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.source-field legend {
-  margin-bottom: 0.4rem;
-  padding: 0;
-}
-
-.source-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0.25rem;
-  border: 1px solid #3a3a3a;
-  border-radius: 0.5rem;
-  background: #181818;
-}
-
-.source-option {
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.35rem;
-  color: #a8a8a8;
-  cursor: pointer;
-  text-align: center;
-}
-
-.source-option.active {
-  background: #f5f5f5;
-  color: #111111;
-}
-
-.source-option:focus-within {
-  outline: 2px solid #8a8a8a;
-  outline-offset: 1px;
-}
-
-.source-option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
 }
 
 .time-inputs {

@@ -537,7 +537,6 @@ const nodeLevels = computed(() => {
                 v-model:name="node.details.name"
                 v-model:description="node.details.description"
                 v-model:percentage="node.percentage.value"
-                v-model:value-source="node.percentage.source"
                 v-model:time="node.timing.value"
                 v-model:time-unit="node.timing.unit"
                 v-model:time-limit-enabled="node.timeLimit.enabled"
