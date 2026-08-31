@@ -26,7 +26,7 @@ function normalizeDuration() {
 
 <template>
   <fieldset class="end-time-field">
-    <legend>End time</legend>
+    <legend>Interval</legend>
 
     <div class="mode-toggle">
       <label :class="['mode-option', { active: mode === 'duration' }]">
@@ -60,33 +60,39 @@ function normalizeDuration() {
       </label>
     </div>
 
-    <div v-else class="date-time-inputs">
-      <label class="date-field">
-        <span>Date</span>
-        <input v-model="date" name="endDate" type="date" required />
-      </label>
+    <div v-else class="date-time-interval">
+      <slot name="start-time"></slot>
 
-      <div class="time-field">
-        <span>Time</span>
-        <div class="clock-inputs">
-          <select v-model="hours" name="endHours" aria-label="End time hours">
-            <option v-for="hour in hourOptions" :key="hour" :value="hour">{{ hour }}</option>
-          </select>
-          <span aria-hidden="true">:</span>
-          <select v-model="minutes" name="endMinutes" aria-label="End time minutes">
-            <option v-for="minute in minuteSecondOptions" :key="minute" :value="minute">
-              {{ minute }}
-            </option>
-          </select>
-          <span aria-hidden="true">:</span>
-          <select v-model="seconds" name="endSeconds" aria-label="End time seconds">
-            <option v-for="second in minuteSecondOptions" :key="second" :value="second">
-              {{ second }}
-            </option>
-          </select>
+      <fieldset class="end-date-time-fields">
+        <legend>End time</legend>
+
+        <label class="date-field">
+          <span>Date</span>
+          <input v-model="date" name="endDate" type="date" required />
+        </label>
+
+        <div class="time-field">
+          <span>Time</span>
+          <div class="clock-inputs">
+            <select v-model="hours" name="endHours" aria-label="End time hours">
+              <option v-for="hour in hourOptions" :key="hour" :value="hour">{{ hour }}</option>
+            </select>
+            <span aria-hidden="true">:</span>
+            <select v-model="minutes" name="endMinutes" aria-label="End time minutes">
+              <option v-for="minute in minuteSecondOptions" :key="minute" :value="minute">
+                {{ minute }}
+              </option>
+            </select>
+            <span aria-hidden="true">:</span>
+            <select v-model="seconds" name="endSeconds" aria-label="End time seconds">
+              <option v-for="second in minuteSecondOptions" :key="second" :value="second">
+                {{ second }}
+              </option>
+            </select>
+          </div>
+          <small>24-hour time (HH:MM:SS)</small>
         </div>
-        <small>24-hour time (HH:MM:SS)</small>
-      </div>
+      </fieldset>
     </div>
   </fieldset>
 </template>
@@ -159,7 +165,8 @@ legend {
   height: 3.1rem;
 }
 
-.date-time-inputs,
+.date-time-interval,
+.end-date-time-fields,
 .date-field,
 .time-field {
   display: flex;
@@ -167,8 +174,20 @@ legend {
   gap: 0.45rem;
 }
 
-.date-time-inputs {
+.date-time-interval {
+  gap: 1rem;
+}
+
+.end-date-time-fields {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #d8d8d8;
+  border-radius: 0.65rem;
   gap: 0.85rem;
+}
+
+.end-date-time-fields legend {
+  padding-inline: 0.35rem;
 }
 
 .date-field > span,

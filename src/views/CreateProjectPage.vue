@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import EndTimePicker from '../components/shared/EndTimePicker.vue'
 import StartTimePicker from '../components/shared/StartTimePicker.vue'
 import { saveProject } from '../services/projectStorage.js'
+import { normalizeDurationParts } from '../utils/duration.js'
 
 const router = useRouter()
 const webMcpController = new AbortController()
@@ -33,6 +34,7 @@ function normalizeClockPart(value, maximum) {
 function normalizeProjectInput(input) {
   const mode = input.endTimeMode === 'dateTime' ? 'dateTime' : 'duration'
   const duration = Number(input.endDuration)
+  const compositeDuration = normalizeDurationParts(input.endDurationParts)
 
   return {
     name: String(input.name ?? '').trim(),
@@ -45,10 +47,12 @@ function normalizeProjectInput(input) {
     },
     endTime: {
       mode,
-      duration: Number.isFinite(duration) ? Math.max(0, Math.trunc(duration)) : 0,
-      durationUnit: endTimeUnits.includes(input.endDurationUnit)
-        ? input.endDurationUnit
-        : 'Seconds',
+      duration:
+        compositeDuration?.value ??
+        (Number.isFinite(duration) ? Math.max(0, Math.trunc(duration)) : 0),
+      durationUnit:
+        compositeDuration?.unit ??
+        (endTimeUnits.includes(input.endDurationUnit) ? input.endDurationUnit : 'Seconds'),
       date: String(input.endDate ?? ''),
       hours: normalizeClockPart(input.endHours, 23),
       minutes: normalizeClockPart(input.endMinutes, 59),
@@ -177,6 +181,22 @@ onMounted(async () => {
               enum: endTimeUnits,
               description: 'Unit for endDuration. Used when endTimeMode is duration.',
             },
+            endDurationParts: {
+              type: 'object',
+              description:
+                'Composite duration parts. The smallest non-zero supplied unit becomes the stored unit and larger parts are converted into it. Years equal 12 months; for days or smaller, years equal 365 days and months equal 30 days.',
+              properties: {
+                years: { type: 'integer', minimum: 0 },
+                months: { type: 'integer', minimum: 0 },
+                days: { type: 'integer', minimum: 0 },
+                hours: { type: 'integer', minimum: 0 },
+                minutes: { type: 'integer', minimum: 0 },
+                seconds: { type: 'integer', minimum: 0 },
+                milliseconds: { type: 'integer', minimum: 0 },
+              },
+              minProperties: 1,
+              additionalProperties: false,
+            },
             endDate: {
               type: 'string',
               format: 'date',
@@ -207,7 +227,10 @@ onMounted(async () => {
               properties: {
                 endTimeMode: { const: 'duration' },
               },
-              required: ['endDuration', 'endDurationUnit'],
+              anyOf: [
+                { required: ['endDuration', 'endDurationUnit'] },
+                { required: ['endDurationParts'] },
+              ],
             },
             {
               properties: {
@@ -286,15 +309,16 @@ onUnmounted(() => {
         v-model:hours="endHours"
         v-model:minutes="endMinutes"
         v-model:seconds="endSeconds"
-      />
-
-      <StartTimePicker
-        v-if="endTimeMode === 'dateTime'"
-        v-model:date="startDate"
-        v-model:hours="startHours"
-        v-model:minutes="startMinutes"
-        v-model:seconds="startSeconds"
-      />
+      >
+        <template #start-time>
+          <StartTimePicker
+            v-model:date="startDate"
+            v-model:hours="startHours"
+            v-model:minutes="startMinutes"
+            v-model:seconds="startSeconds"
+          />
+        </template>
+      </EndTimePicker>
 
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
 
