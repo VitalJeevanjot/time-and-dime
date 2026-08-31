@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
 import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
@@ -8,11 +8,14 @@ import {
   addProjectNode,
   addProjectNodeAbove,
   addProjectNodeRight,
+  deleteProject,
+  deleteProjectNode,
   getProject,
   updateProject,
 } from '../services/projectStorage.js'
 
 const route = useRoute()
+const router = useRouter()
 const project = ref(null)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
@@ -81,6 +84,28 @@ function selectNodeType(nodeType) {
   closeNodePicker()
 }
 
+function removeNode(nodeId) {
+  project.value = deleteProjectNode(route.params.id, nodeId)
+  closeNodePicker()
+}
+
+function removeProject() {
+  const shouldDelete = window.confirm(`Delete “${project.value.name}” and all of its nodes?`)
+  if (!shouldDelete) return
+
+  deleteProject(route.params.id)
+  void router.push('/')
+}
+
+function logStoredNode(nodeId) {
+  updateProject(project.value)
+  const storedNode = getProject(route.params.id)?.nodes.find((node) => node.id === nodeId)
+
+  if (storedNode) {
+    console.log(JSON.stringify(storedNode, null, 2))
+  }
+}
+
 watch(
   () => route.params.id,
   (projectId) => {
@@ -126,8 +151,8 @@ const nodeLevels = computed(() => {
 
   for (const node of project.value?.nodes ?? []) {
     const levelKey = JSON.stringify([
-      node.relations?.aboveCardId ?? null,
-      node.relations?.belowCardId ?? null,
+      node.relations?.aboveCardIds ?? [],
+      node.relations?.belowCardIds ?? [],
     ])
     let level = levelsByRelations.get(levelKey)
 
@@ -175,6 +200,9 @@ const nodeLevels = computed(() => {
         >
           {{ showDetails ? 'Hide info' : 'Show info' }}
         </button>
+        <button class="delete-project-button" type="button" @click="removeProject">
+          Delete project
+        </button>
       </div>
     </header>
 
@@ -204,38 +232,66 @@ const nodeLevels = computed(() => {
       <section class="node-workspace" aria-label="Project nodes">
         <div v-for="level in nodeLevels" :key="level.key" class="node-level">
           <div
+            v-if="
+              nodePickerOpen &&
+              nodePickerTargetId === level.nodes[0].id &&
+              nodePickerDirection === 'above'
+            "
+            class="level-node-picker"
+            @click.stop
+          >
+            <NodeTypePicker @select="selectNodeType" />
+          </div>
+
+          <button
+            class="surrounding-add top-add"
+            type="button"
+            aria-label="Add node above this level"
+            aria-haspopup="menu"
+            :aria-expanded="
+              nodePickerOpen &&
+              nodePickerTargetId === level.nodes[0].id &&
+              nodePickerDirection === 'above'
+            "
+            @click.stop="toggleAboveNodePicker(level.nodes[0].id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+
+          <div
             class="node-level-track"
             :class="{ 'has-horizontal-scroll': level.nodes.length > 1 }"
           >
-            <div v-for="node in level.nodes" :key="node.id" class="node-shell">
+            <div
+              v-for="(node, nodePosition) in level.nodes"
+              :key="node.id"
+              class="node-shell"
+              @click.meta="logStoredNode(node.id)"
+            >
               <div
-                v-if="nodePickerOpen && nodePickerTargetId === node.id"
-                class="card-node-picker"
+                v-if="
+                  nodePickerOpen &&
+                  nodePickerTargetId === node.id &&
+                  nodePickerDirection === 'right'
+                "
+                class="card-node-picker right-node-picker"
                 @click.stop
               >
                 <NodeTypePicker @select="selectNodeType" />
               </div>
 
               <button
-                class="surrounding-add top-add"
+                class="delete-node-button"
                 type="button"
-                aria-label="Add node above"
-                aria-haspopup="menu"
-                :aria-expanded="
-                  nodePickerOpen &&
-                  nodePickerTargetId === node.id &&
-                  nodePickerDirection === 'above'
-                "
-                @click.stop="toggleAboveNodePicker(node.id)"
+                :aria-label="`Delete node ${node.index}`"
+                @click.stop="removeNode(node.id)"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" />
+                  <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
                 </svg>
               </button>
-
-              <span class="node-count" :aria-label="`Node ${node.index}`">
-                {{ node.index }}
-              </span>
 
               <ValueCard
                 v-if="node.type === 'value'"
@@ -264,6 +320,7 @@ const nodeLevels = computed(() => {
               />
 
               <button
+                v-if="nodePosition === level.nodes.length - 1"
                 class="surrounding-add right-add"
                 type="button"
                 aria-label="Add node to the right"
@@ -421,6 +478,21 @@ h1 {
   font-weight: 700;
 }
 
+.delete-project-button {
+  padding: 0.75rem 0.95rem;
+  border: 1px solid #e0b7b7;
+  border-radius: 0.6rem;
+  background: #fff5f5;
+  color: #a51d1d;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.delete-project-button:hover {
+  border-color: #cf8d8d;
+  background: #ffe8e8;
+}
+
 .details-card {
   box-sizing: border-box;
   width: min(28rem, 100%);
@@ -479,11 +551,11 @@ dd {
 .node-workspace {
   display: grid;
   box-sizing: border-box;
-  width: min(42rem, 100%);
+  width: min(78rem, 100%);
   min-height: 100%;
   margin-inline: auto;
-  padding: 4.75rem 4rem;
-  gap: 7rem;
+  padding-block: 4.75rem;
+  gap: 8rem;
 }
 
 .node-level {
@@ -491,12 +563,20 @@ dd {
   min-width: 0;
 }
 
+.node-level:has(.has-horizontal-scroll) {
+  margin-bottom: 6rem;
+}
+
 .node-level-track {
   display: flex;
-  margin: -4rem;
-  gap: 7rem;
+  margin-block: -4rem;
+  gap: 4.5rem;
   padding: 4rem;
   overflow: visible;
+}
+
+.node-level-track:not(.has-horizontal-scroll) {
+  justify-content: center;
 }
 
 .node-level-track.has-horizontal-scroll {
@@ -525,22 +605,32 @@ dd {
 .node-shell {
   position: relative;
   width: 100%;
-  flex: 0 0 100%;
+  flex: 0 0 min(34rem, calc(100% - 8rem));
   scroll-snap-align: center;
 }
 
 .node-level + .node-level::before {
   position: absolute;
-  bottom: 100%;
+  top: -8rem;
   left: 50%;
   width: 1px;
-  height: 7rem;
+  height: 4.4rem;
   background: #b8b8b8;
   content: '';
   transform: translateX(-50%);
 }
 
+.node-level:has(.has-horizontal-scroll) + .node-level::before {
+  top: -11.5rem;
+  height: 7.9rem;
+}
+
 .card-node-picker {
+  position: absolute;
+  z-index: 5;
+}
+
+.level-node-picker {
   position: absolute;
   top: 0.75rem;
   left: 50%;
@@ -548,27 +638,50 @@ dd {
   transform: translateX(-50%);
 }
 
-.card-node-picker :deep(.node-type-picker)::after {
+.card-node-picker :deep(.node-type-picker)::after,
+.level-node-picker :deep(.node-type-picker)::after {
   display: none;
 }
 
-.node-count {
+.right-node-picker {
+  top: 50%;
+  right: 0.25rem;
+  transform: translateY(-50%);
+}
+
+.delete-node-button {
   position: absolute;
-  top: 0.8rem;
-  right: 0.8rem;
-  z-index: 2;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
   display: grid;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  box-sizing: border-box;
-  padding-inline: 0.4rem;
-  border: 1px solid #444444;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #111111;
-  font-size: 0.75rem;
-  font-weight: 800;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid #493030;
+  border-radius: 0.65rem;
+  background: #261717;
+  color: #ff8d8d;
+  cursor: pointer;
   place-items: center;
+}
+
+.delete-node-button:hover {
+  background: #3a1c1c;
+  color: #ffb0b0;
+}
+
+.delete-node-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.delete-node-button path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .surrounding-add {
@@ -661,6 +774,8 @@ dd {
 }
 
 .details-button:focus-visible,
+.delete-project-button:focus-visible,
+.delete-node-button:focus-visible,
 .surrounding-add:focus-visible,
 .add-button:focus-visible {
   outline: 3px solid rgb(0 0 0 / 22%);
@@ -717,8 +832,5 @@ dd {
     margin-top: 1.5rem;
   }
 
-  .node-workspace {
-    padding-inline: 3.5rem;
-  }
 }
 </style>
