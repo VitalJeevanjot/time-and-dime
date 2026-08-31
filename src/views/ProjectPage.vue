@@ -70,16 +70,19 @@ function toggleRightNodePicker(nodeId) {
 }
 
 function selectNodeType(nodeType) {
+  const nodeDetails = {
+    type: nodeType,
+    timeLimit: {
+      type: project.value.endTime.mode,
+    },
+  }
+
   if (nodePickerDirection.value === 'right') {
-    project.value = addProjectNodeRight(route.params.id, nodePickerTargetId.value, {
-      type: nodeType,
-    })
+    project.value = addProjectNodeRight(route.params.id, nodePickerTargetId.value, nodeDetails)
   } else if (nodePickerDirection.value === 'above') {
-    project.value = addProjectNodeAbove(route.params.id, nodePickerTargetId.value, {
-      type: nodeType,
-    })
+    project.value = addProjectNodeAbove(route.params.id, nodePickerTargetId.value, nodeDetails)
   } else {
-    project.value = addProjectNode(route.params.id, { type: nodeType })
+    project.value = addProjectNode(route.params.id, nodeDetails)
   }
   closeNodePicker()
 }
@@ -303,7 +306,7 @@ const nodeLevels = computed(() => {
                 v-model:time-unit="node.timing.unit"
                 v-model:time-limit-enabled="node.timeLimit.enabled"
                 v-model:time-limit="node.timeLimit"
-                :time-limit-type="node.timeLimit.type"
+                :time-limit-type="project.endTime.mode"
               />
               <PercentageCard
                 v-else-if="node.type === 'percentage'"
@@ -316,7 +319,7 @@ const nodeLevels = computed(() => {
                 v-model:time-unit="node.timing.unit"
                 v-model:time-limit-enabled="node.timeLimit.enabled"
                 v-model:time-limit="node.timeLimit"
-                :time-limit-type="node.timeLimit.type"
+                :time-limit-type="project.endTime.mode"
               />
 
               <button
@@ -570,7 +573,7 @@ dd {
 .node-level-track {
   display: flex;
   margin-block: -4rem;
-  gap: 4.5rem;
+  gap: 2rem;
   padding: 4rem;
   overflow: visible;
 }
