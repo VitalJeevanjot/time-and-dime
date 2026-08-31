@@ -1,13 +1,14 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, useId } from 'vue'
 import { useRouter } from 'vue-router'
-import EndTimePicker from '../components/shared/EndTimePicker.vue'
-import StartTimePicker from '../components/shared/StartTimePicker.vue'
+import DurationPicker from '../components/shared/DurationPicker.vue'
+import StartEndTimePicker from '../components/shared/StartEndTimePicker.vue'
 import { saveProject } from '../services/projectStorage.js'
 import { normalizeDurationParts } from '../utils/duration.js'
 
 const router = useRouter()
 const webMcpController = new AbortController()
+const intervalModeName = `${useId()}-interval-mode`
 const endTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
 const name = ref('')
@@ -301,24 +302,48 @@ onUnmounted(() => {
         ></textarea>
       </label>
 
-      <EndTimePicker
-        v-model:mode="endTimeMode"
-        v-model:duration="endDuration"
-        v-model:duration-unit="endDurationUnit"
-        v-model:date="endDate"
-        v-model:hours="endHours"
-        v-model:minutes="endMinutes"
-        v-model:seconds="endSeconds"
-      >
-        <template #start-time>
-          <StartTimePicker
-            v-model:date="startDate"
-            v-model:hours="startHours"
-            v-model:minutes="startMinutes"
-            v-model:seconds="startSeconds"
-          />
-        </template>
-      </EndTimePicker>
+      <fieldset class="interval-field">
+        <legend>Interval</legend>
+
+        <div class="mode-toggle">
+          <label :class="['mode-option', { active: endTimeMode === 'duration' }]">
+            <input
+              v-model="endTimeMode"
+              :name="intervalModeName"
+              type="radio"
+              value="duration"
+            />
+            <span>Duration</span>
+          </label>
+          <label :class="['mode-option', { active: endTimeMode === 'dateTime' }]">
+            <input
+              v-model="endTimeMode"
+              :name="intervalModeName"
+              type="radio"
+              value="dateTime"
+            />
+            <span>Date &amp; time</span>
+          </label>
+        </div>
+
+        <DurationPicker
+          v-if="endTimeMode === 'duration'"
+          v-model:duration="endDuration"
+          v-model:duration-unit="endDurationUnit"
+        />
+
+        <StartEndTimePicker
+          v-else
+          v-model:start-date="startDate"
+          v-model:start-hours="startHours"
+          v-model:start-minutes="startMinutes"
+          v-model:start-seconds="startSeconds"
+          v-model:end-date="endDate"
+          v-model:end-hours="endHours"
+          v-model:end-minutes="endMinutes"
+          v-model:end-seconds="endSeconds"
+        />
+      </fieldset>
 
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
 
@@ -399,6 +424,61 @@ h1 {
 
 .field textarea {
   resize: vertical;
+}
+
+.interval-field {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.interval-field > legend {
+  margin-bottom: 0.45rem;
+  padding: 0;
+  font-weight: 700;
+}
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.25rem;
+  border: 1px solid #cccccc;
+  border-radius: 0.6rem;
+  background: #eeeeee;
+}
+
+.mode-option {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.4rem;
+  color: #686868;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mode-option.active {
+  background: #ffffff;
+  color: #161616;
+  box-shadow: 0 0.15rem 0.5rem rgb(0 0 0 / 10%);
+}
+
+.mode-option:focus-within {
+  outline: 2px solid #444444;
+  outline-offset: 1px;
+}
+
+.mode-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .field input:focus,
