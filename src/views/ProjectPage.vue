@@ -22,6 +22,7 @@ const route = useRoute()
 const router = useRouter()
 const webMcpController = new AbortController()
 const project = ref(null)
+const projectOutputValue = ref(0)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
 const nodePickerTargetId = ref(null)
@@ -451,6 +452,17 @@ const nodeLevels = computed(() => {
     </aside>
 
     <div v-if="project.nodes.length" class="node-scroller">
+      <div class="project-run-control">
+        <output class="project-output-value" aria-label="Project output value">
+          {{ projectOutputValue }}
+        </output>
+        <button class="play-project-button" type="button" aria-label="Play project" @click.stop>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 6 9 6-9 6Z" />
+          </svg>
+        </button>
+      </div>
+
       <section class="node-workspace" aria-label="Project nodes">
         <div v-for="level in nodeLevels" :key="level.key" class="node-level">
           <div
@@ -674,7 +686,7 @@ const nodeLevels = computed(() => {
 
 h1 {
   margin: 0.5rem 0 0;
-  font-size: clamp(1.9rem, 4vw, 3.25rem);
+  font-size: clamp(1.55rem, 3vw, 2.5rem);
   letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
@@ -833,13 +845,71 @@ dd {
   width: min(90rem, 100%);
   min-height: 0;
   flex: 1;
-  margin: 2rem auto 0;
+  margin: 0.75rem auto 0;
   overflow: auto;
   border: 1px solid #e2e2e2;
   border-radius: 1.25rem;
   background: #f7f7f7;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+.project-run-control {
+  position: sticky;
+  top: 1rem;
+  z-index: 6;
+  display: flex;
+  width: max-content;
+  margin: 1rem auto -0.25rem;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.project-output-value {
+  display: block;
+  min-width: 7rem;
+  box-sizing: border-box;
+  padding: 0.55rem 1.4rem;
+  border: 1px solid #ff3ed1;
+  border-radius: 1rem;
+  background: #1c0a19;
+  color: #ffe66d;
+  font-family: "Avenir Next Rounded", "Nunito Sans", ui-rounded, system-ui, sans-serif;
+  font-size: 1.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  text-align: center;
+}
+
+.play-project-button {
+  display: grid;
+  width: 2.35rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 1px solid #343426;
+  border-radius: 0.7rem;
+  background: #171712;
+  box-shadow: 0 0.35rem 0.9rem rgb(0 0 0 / 18%);
+  color: #ecd36f;
+  cursor: pointer;
+  place-items: center;
+}
+
+.play-project-button:hover {
+  border-color: #55513a;
+  background: #212119;
+  color: #ffe992;
+}
+
+.play-project-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.play-project-button path {
+  fill: currentColor;
 }
 
 .node-workspace {
@@ -1081,6 +1151,7 @@ dd {
 .delete-project-button:focus-visible,
 .delete-node-button:focus-visible,
 .surrounding-add:focus-visible,
+.play-project-button:focus-visible,
 .add-button:focus-visible {
   outline: 3px solid rgb(0 0 0 / 22%);
   outline-offset: 3px;
