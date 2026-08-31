@@ -1,4 +1,4 @@
-import { getProject, updateProject } from '../services/projectStorage.js'
+import { deleteProjectNode, getProject, updateProject } from '../services/projectStorage.js'
 
 const operations = ['+', '-', '/', '*', '%']
 const valueTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
@@ -289,6 +289,44 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
+        idempotentHint: false,
+        untrustedContentHint: false,
+      },
+    },
+    { signal },
+  )
+
+  await document.modelContext.registerTool(
+    {
+      name: 'delete_project_node',
+      description:
+        'Permanently delete one node from the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. If a name is duplicated, use get_project_nodes to find the exact UUID. Connected levels are relinked by the project graph storage logic.',
+      inputSchema: {
+        type: 'object',
+        properties: targetProperties,
+        oneOf: [{ required: ['nodeId'] }, { required: ['nodeName'] }],
+        additionalProperties: false,
+      },
+      execute: (input) => {
+        const projectId = requiredString(getProjectId(), 'projectId')
+        const project = getStoredProject(projectId)
+        const node = resolveNode(project, input)
+        const updatedProject = deleteProjectNode(projectId, node.id)
+        onProjectUpdated?.(updatedProject)
+
+        return JSON.stringify(
+          {
+            projectId,
+            deletedNode: node,
+            remainingNodeCount: updatedProject.nodes.length,
+          },
+          null,
+          2,
+        )
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
         idempotentHint: false,
         untrustedContentHint: false,
       },
