@@ -129,6 +129,33 @@ onMounted(async () => {
   try {
     await document.modelContext.registerTool(
       {
+        name: 'go_to_home',
+        description: 'Leave the Create Project page and return to the Time&Dime home page.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          void router.push({ name: 'start' })
+          return 'Opened the Time&Dime home page.'
+        },
+        annotations: {
+          readOnlyHint: true,
+          untrustedContentHint: false,
+        },
+      },
+      { signal: webMcpController.signal },
+    )
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP go-home tool.', error)
+    }
+  }
+
+  try {
+    await document.modelContext.registerTool(
+      {
         name: 'create_project',
         description:
           'Create a Time&Dime project, store it locally, and open its project page. Duration projects need an end duration. Date-time projects need exact start and end dates with 24-hour times.',

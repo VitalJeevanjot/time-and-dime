@@ -116,8 +116,17 @@ function removeProject() {
   const shouldDelete = window.confirm(`Delete “${project.value.name}” and all of its nodes?`)
   if (!shouldDelete) return
 
-  deleteProject(route.params.id)
-  void router.push('/')
+  deleteCurrentProject()
+}
+
+function deleteCurrentProject() {
+  const projectId = String(route.params.id)
+  const storedProject = getProject(projectId)
+  if (!storedProject) throw new Error(`Project ${projectId} was not found.`)
+
+  deleteProject(projectId)
+  void router.push({ name: 'start' })
+  return storedProject
 }
 
 function logStoredNode(nodeId) {
@@ -160,6 +169,63 @@ watch(
 
 onMounted(async () => {
   if (!document.modelContext?.registerTool) return
+
+  try {
+    await document.modelContext.registerTool(
+      {
+        name: 'go_to_home',
+        description: 'Leave the current project and return to the Time&Dime home page.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          void router.push({ name: 'start' })
+          return 'Opened the Time&Dime home page.'
+        },
+        annotations: {
+          readOnlyHint: true,
+          untrustedContentHint: false,
+        },
+      },
+      { signal: webMcpController.signal },
+    )
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP go-home tool.', error)
+    }
+  }
+
+  try {
+    await document.modelContext.registerTool(
+      {
+        name: 'delete_project',
+        description:
+          'Permanently delete the currently open Time&Dime project and all of its nodes from local storage, then return to the home page.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          const deletedProject = deleteCurrentProject()
+          return `Deleted project "${deletedProject.name}" with ID ${deletedProject.id}.`
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          untrustedContentHint: false,
+        },
+      },
+      { signal: webMcpController.signal },
+    )
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP delete-project tool.', error)
+    }
+  }
 
   try {
     await document.modelContext.registerTool(
