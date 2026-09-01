@@ -7,10 +7,8 @@ import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
 import { registerCreatePercentageNodeTool } from '../webmcp/registerCreatePercentageNodeTool.js'
 import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
 import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
-import {
-  calculateProjectDurationInMilliseconds,
-  extractNodeRunTimesInMilliseconds,
-} from '../utils/calculation.js'
+import { calculateProjectDurationInMilliseconds } from '../utils/calculation.js'
+import { createProjectRunScheduler } from '../utils/projectRunScheduler.js'
 import {
   addProjectNode,
   addProjectNodeAbove,
@@ -31,6 +29,7 @@ const showDetails = ref(false)
 const nodePickerOpen = ref(false)
 const nodePickerTargetId = ref(null)
 const nodePickerDirection = ref(null)
+let activeProjectRunScheduler = null
 
 function closeNodePicker() {
   nodePickerOpen.value = false
@@ -146,12 +145,28 @@ function logStoredNode(nodeId) {
 }
 
 function runProject() {
+  activeProjectRunScheduler?.stop()
+
   const projectEndTimeInMilliseconds = calculateProjectDurationInMilliseconds(project.value)
-  const nodeRunTimes = extractNodeRunTimesInMilliseconds(
-    project.value,
+  const scheduler = createProjectRunScheduler({
+    project: project.value,
     projectEndTimeInMilliseconds,
-  )
-  console.log(nodeRunTimes)
+    getProject: () => project.value,
+    onNodeRun: (runEvent) => console.log(runEvent),
+    onError: (error) => console.error('Project run failed.', error),
+  })
+
+  activeProjectRunScheduler = scheduler
+  void scheduler
+    .start()
+    .then((result) => {
+      if (activeProjectRunScheduler !== scheduler) return
+      console.log(result.nodeRunTimes)
+      activeProjectRunScheduler = null
+    })
+    .catch(() => {
+      if (activeProjectRunScheduler === scheduler) activeProjectRunScheduler = null
+    })
 }
 
 function getStoredProjectInfo() {
@@ -167,6 +182,8 @@ function getStoredProjectInfo() {
 watch(
   () => route.params.id,
   (projectId) => {
+    activeProjectRunScheduler?.stop()
+    activeProjectRunScheduler = null
     project.value = getProject(projectId)
     showDetails.value = false
     closeNodePicker()
@@ -312,6 +329,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  activeProjectRunScheduler?.stop()
   webMcpController.abort()
 })
 

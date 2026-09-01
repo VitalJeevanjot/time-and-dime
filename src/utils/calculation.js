@@ -123,3 +123,61 @@ export function extractNodeRunTimesInMilliseconds(
     }
   })
 }
+
+function getNodeCalculationValues(node) {
+  if (node.type === 'value') {
+    return {
+      type: 'value',
+      value: node.value,
+    }
+  }
+
+  if (node.type === 'percentage') {
+    return {
+      type: 'percentage',
+      percentageValue: node.percentage?.value,
+      referenceValue: node.referenceValue,
+    }
+  }
+
+  throw new Error(`Unsupported node type: ${node.type}.`)
+}
+
+export function traverseNodeRunTimes(
+  project,
+  projectEndTimeInMilliseconds = calculateProjectDurationInMilliseconds(project),
+) {
+  const nodeRunTimes = extractNodeRunTimesInMilliseconds(
+    project,
+    projectEndTimeInMilliseconds,
+  )
+  const nodesById = new Map(project.nodes.map((node) => [node.id, node]))
+  // while (true) {
+  //   const nodesWithEndTimes = nodeRunTimes.filter(({ end_time: endTime }) => endTime !== 0n)
+  //   const allNodesFinished =
+  //     nodesWithEndTimes.length === 0 ||
+  //     nodesWithEndTimes.every(
+  //       ({ next_time_to_run: nextTimeToRun, end_time: endTime }) => nextTimeToRun > endTime,
+  //     )
+  //   if (allNodesFinished) break
+
+  //   let advancedNode = false
+
+  //   for (const nodeRunTime of nodeRunTimes) {
+  //     const { time, next_time_to_run: nextTimeToRun, end_time: endTime } = nodeRunTime
+  //     const canRun = time > 0n && nextTimeToRun > 0n && endTime > 0n && nextTimeToRun < endTime
+  //     if (!canRun) continue
+
+  //     const node = nodesById.get(nodeRunTime.id)
+  //     if (!node) throw new Error(`Node ${nodeRunTime.id} was not found.`)
+
+  //     nodeRunTime.cardValues = getNodeCalculationValues(node)
+  //     nodeRunTime.next_time_to_run += time
+  //     advancedNode = true
+  //   }
+
+  //   if (!advancedNode) break
+  // }
+
+  return nodeRunTimes
+}
