@@ -1,5 +1,6 @@
 <script setup>
 import OperationPicker from './shared/OperationPicker.vue'
+import StaticToggle from './shared/StaticToggle.vue'
 import TimeLimit from './shared/TimeLimit.vue'
 
 defineProps({
@@ -13,6 +14,7 @@ defineProps({
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
+const isStatic = defineModel('isStatic', { type: Boolean, default: false })
 const value = defineModel('value', { type: Number, default: 0 })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
@@ -56,16 +58,20 @@ function toNonNegativeInteger(input) {
   <article class="value-card">
     <OperationPicker v-model="operation" />
 
-    <label class="field">
+    <div class="field">
       <span>Value</span>
-      <input
-        v-model.number="value"
-        name="value"
-        type="number"
-        step="any"
-        @change="value = toFiniteNumber(value)"
-      />
-    </label>
+      <span class="static-value-row">
+        <input
+          v-model.number="value"
+          name="value"
+          type="number"
+          step="any"
+          aria-label="Value"
+          @change="value = toFiniteNumber(value)"
+        />
+        <StaticToggle v-model="isStatic" />
+      </span>
+    </div>
 
     <div class="field">
       <span>Time</span>
@@ -139,6 +145,20 @@ function toNonNegativeInteger(input) {
   flex-direction: column;
   gap: 0.32rem;
   font-weight: 600;
+}
+
+.static-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+}
+
+.static-value-row :deep(.static-toggle) {
+  --static-border: #f0d4bd;
+  --static-background: rgb(255 249 243 / 18%);
+  --static-active-background: #fff9f3;
+  --static-check-color: #b65d16;
+  --static-focus: #fff1e1;
 }
 
 input,

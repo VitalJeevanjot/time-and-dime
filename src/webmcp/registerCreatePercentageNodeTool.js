@@ -57,6 +57,12 @@ function requiredNumber(value, fieldName) {
   return value
 }
 
+function optionalBoolean(value, defaultValue, fieldName) {
+  if (value === undefined) return defaultValue
+  if (typeof value !== 'boolean') throw new Error(`${fieldName} must be a boolean.`)
+  return value
+}
+
 function normalizeDurationBoundary(boundary, fieldName) {
   if (!boundary || typeof boundary !== 'object' || Array.isArray(boundary)) {
     throw new Error(`${fieldName} is required for a duration time limit.`)
@@ -135,6 +141,7 @@ function createPercentageNodeInput(input, project) {
   return {
     type: 'percentage',
     operation: requiredEnum(input.operation, operations, 'operation'),
+    isStatic: optionalBoolean(input.isStatic, true, 'isStatic'),
     referenceValue:
       input.referenceValue === undefined
         ? 0
@@ -184,7 +191,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
     {
       name: 'create_percentage_node',
       description:
-        'Create a Percentage node in the currently open Time&Dime project. referenceValue is optional and defaults to 0. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply that calculated amount to the value field of each node above using the Percentage node selected operation. When referenceValue is 0, process the nodes above one by one: first calculate the percentage amount from each above node’s current value, then apply that calculated amount back to that same node value using the selected operation. Identify the target by exactly one of targetNodeName or targetNodeId. "above" creates a level above the target, "right" adds to its horizontal level, and "bottom" creates below its level. Bottom inserts between connected levels when a lower level exists, or creates a new lowest level when the target is already lowest. The optional timeLimit must match the project interval mode.',
+        'Create a Percentage node in the currently open Time&Dime project. isStatic is optional and defaults to true. When isStatic is true, this node’s Percentage number does not change when operations from cards below are applied to it. referenceValue is optional and defaults to 0. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply that calculated amount to the value field of each node above using the Percentage node selected operation. When referenceValue is 0, process the nodes above one by one: first calculate the percentage amount from each above node’s current value, then apply that calculated amount back to that same node value using the selected operation. Identify the target by exactly one of targetNodeName or targetNodeId. "above" creates a level above the target, "right" adds to its horizontal level, and "bottom" creates below its level. Bottom inserts between connected levels when a lower level exists, or creates a new lowest level when the target is already lowest. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -215,6 +222,11 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             type: 'number',
             description:
               'Required finite percentage; decimal and negative values are allowed. When referenceValue is 0, use this percentage to calculate an amount from each above node’s current value separately before applying that amount back to the same node’s value. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply it to above-node values one by one using the selected operation.',
+          },
+          isStatic: {
+            type: 'boolean',
+            description:
+              'Optional; defaults to true. When true, this node’s Percentage number will not change when operations from cards below are applied to it.',
           },
           referenceValue: {
             type: 'number',

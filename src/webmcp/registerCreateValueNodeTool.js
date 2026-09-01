@@ -46,6 +46,12 @@ function requiredNumber(value, fieldName) {
   return value
 }
 
+function optionalBoolean(value, defaultValue, fieldName) {
+  if (value === undefined) return defaultValue
+  if (typeof value !== 'boolean') throw new Error(`${fieldName} must be a boolean.`)
+  return value
+}
+
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error(`${fieldName} is required.`)
@@ -124,6 +130,7 @@ function createValueNodeInput(input, project) {
   return {
     type: 'value',
     operation: requiredEnum(input.operation, operations, 'operation'),
+    isStatic: optionalBoolean(input.isStatic, false, 'isStatic'),
     value: requiredNumber(input.value, 'value'),
     timing: {
       value: requiredInteger(input.time, 'time', 0),
@@ -200,7 +207,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
     {
       name: 'create_value_node',
       description:
-        'Create a Value node in the currently open Time&Dime project. The value stored on the Value node is applied to its node or nodes above using the arithmetic operation selected on the current Value node. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode: duration boundaries for duration projects, or date-time boundaries for date-time projects.',
+        'Create a Value node in the currently open Time&Dime project. isStatic is optional and defaults to false. When isStatic is true, this node’s Value number does not change when operations from cards below are applied to it. The value stored on the Value node is applied to its node or nodes above using the arithmetic operation selected on the current Value node. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode: duration boundaries for duration projects, or date-time boundaries for date-time projects.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -231,6 +238,11 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
             type: 'number',
             description:
               'Required finite value applied to the node or nodes above using this Value node selected operation. Decimal and negative values are allowed.',
+          },
+          isStatic: {
+            type: 'boolean',
+            description:
+              'Optional; defaults to false. When true, this node’s Value number will not change when operations from cards below are applied to it.',
           },
           time: {
             type: 'integer',

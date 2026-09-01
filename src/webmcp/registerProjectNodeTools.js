@@ -8,6 +8,7 @@ const editableFields = [
   'operation',
   'details.name',
   'details.description',
+  'isStatic',
   'referenceValue',
   'value',
   'percentage.value',
@@ -165,6 +166,9 @@ function updateNodeField(node, projectMode, field, value) {
   if (field === 'details.description') {
     return { ...node, details: { ...node.details, description: stringValue(value, field) } }
   }
+  if (field === 'isStatic') {
+    return { ...node, isStatic: booleanValue(value, field) }
+  }
   if (field === 'value') {
     if (node.type !== 'value') throw new Error('value is only editable on a Value node.')
     return { ...node, value: finiteNumberValue(value, field) }
@@ -257,7 +261,7 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
     {
       name: 'edit_project_node',
       description:
-        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select the node by exactly one of nodeName or nodeId. A Value node value is applied to the value field of its node or nodes above using the operation selected on the current Value node. For a Percentage node with a non-zero referenceValue, calculate the percentage amount from that reference and apply it to each above node value using the selected operation. When referenceValue is 0, process above nodes one by one: calculate a separate percentage amount from each node’s current value, then apply that amount back to the same node value using the selected operation. Use get_project_nodes first when the node identity or current structure is unknown. Structural fields such as UUID, index, type, and relations cannot be changed.',
+        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select the node by exactly one of nodeName or nodeId. Set isStatic to true when the node’s Value or Percentage number must not change from operations applied by cards below; set it to false to allow those operations to change the number. A Value node value is applied to the value field of its node or nodes above using the operation selected on the current Value node. For a Percentage node with a non-zero referenceValue, calculate the percentage amount from that reference and apply it to each above node value using the selected operation. When referenceValue is 0, process above nodes one by one: calculate a separate percentage amount from each node’s current value, then apply that amount back to the same node value using the selected operation. Use get_project_nodes first when the node identity or current structure is unknown. Structural fields such as UUID, index, type, and relations cannot be changed.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -265,7 +269,8 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
           field: {
             type: 'string',
             enum: editableFields,
-            description: 'Required structured path of the editable card field.',
+            description:
+              'Required structured path of the editable card field. isStatic controls whether operations from cards below may change this node’s Value or Percentage number.',
           },
           value: {
             description:

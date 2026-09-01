@@ -1,5 +1,6 @@
 <script setup>
 import OperationPicker from './shared/OperationPicker.vue'
+import StaticToggle from './shared/StaticToggle.vue'
 import TimeLimit from './shared/TimeLimit.vue'
 
 defineProps({
@@ -13,6 +14,7 @@ defineProps({
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
+const isStatic = defineModel('isStatic', { type: Boolean, default: true })
 const referenceValue = defineModel('referenceValue', { type: Number, default: 0 })
 const percentage = defineModel('percentage', { type: Number, default: 0 })
 const time = defineModel('time', { type: Number, default: 0 })
@@ -57,19 +59,23 @@ function toNonNegativeInteger(input) {
   <article class="percentage-card">
     <OperationPicker v-model="operation" />
 
-    <label class="field">
+    <div class="field">
       <span>Percentage</span>
-      <span class="percentage-input">
-        <input
-          v-model.number="percentage"
-          name="percentage"
-          type="number"
-          step="any"
-          @change="percentage = toFiniteNumber(percentage)"
-        />
-        <span class="percentage-symbol" aria-hidden="true">%</span>
+      <span class="static-value-row">
+        <span class="percentage-input">
+          <input
+            v-model.number="percentage"
+            name="percentage"
+            type="number"
+            step="any"
+            aria-label="Percentage"
+            @change="percentage = toFiniteNumber(percentage)"
+          />
+          <span class="percentage-symbol" aria-hidden="true">%</span>
+        </span>
+        <StaticToggle v-model="isStatic" />
       </span>
-    </label>
+    </div>
 
     <label class="field">
       <span>Reference Value</span>
@@ -161,6 +167,24 @@ function toNonNegativeInteger(input) {
   flex-direction: column;
   gap: 0.32rem;
   font-weight: 600;
+}
+
+.static-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+}
+
+.static-value-row > .percentage-input {
+  flex: 1;
+}
+
+.static-value-row :deep(.static-toggle) {
+  --static-border: #294d38;
+  --static-background: rgb(4 13 8 / 72%);
+  --static-active-background: #dff5e7;
+  --static-check-color: #123f27;
+  --static-focus: #478862;
 }
 
 input,

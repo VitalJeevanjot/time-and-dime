@@ -5,6 +5,7 @@ import ValueCard from '../components/ValueCard.vue'
 
 const valueCardName = ref('')
 const valueCardDescription = ref('')
+const valueCardIsStatic = ref(false)
 const valueCardValue = ref(0)
 const valueCardTime = ref(0)
 const valueCardTimeUnit = ref('Seconds')
@@ -32,6 +33,7 @@ const valueCardTimeLimit = ref({
 
 const percentageCardName = ref('')
 const percentageCardDescription = ref('')
+const percentageCardIsStatic = ref(true)
 const percentageCardReferenceValue = ref(0)
 const percentageCardPercentage = ref(0)
 const percentageCardTime = ref(0)
@@ -73,6 +75,7 @@ const percentageCardTimeLimit = ref({
         v-model:operation="valueCardOperation"
         v-model:name="valueCardName"
         v-model:description="valueCardDescription"
+        v-model:is-static="valueCardIsStatic"
         v-model:value="valueCardValue"
         v-model:time="valueCardTime"
         v-model:time-unit="valueCardTimeUnit"
@@ -85,6 +88,7 @@ const percentageCardTimeLimit = ref({
         v-model:operation="percentageCardOperation"
         v-model:name="percentageCardName"
         v-model:description="percentageCardDescription"
+        v-model:is-static="percentageCardIsStatic"
         v-model:reference-value="percentageCardReferenceValue"
         v-model:percentage="percentageCardPercentage"
         v-model:time="percentageCardTime"
