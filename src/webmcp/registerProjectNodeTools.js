@@ -1,4 +1,5 @@
 import { deleteProjectNode, getProject, updateProject } from '../services/projectStorage.js'
+import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 
 const operations = ['+', '-', '/', '*', '%']
 const valueTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
@@ -61,16 +62,16 @@ function integerValue(value, fieldName, minimum = Number.NEGATIVE_INFINITY, maxi
   return value
 }
 
-function finiteNumberValue(value, fieldName) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`${fieldName} must be a finite number.`)
-  }
-  return value
-}
-
 function booleanValue(value, fieldName) {
   if (typeof value !== 'boolean') throw new Error(`${fieldName} must be a boolean.`)
   return value
+}
+
+function decimalStringValue(value, fieldName) {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be supplied as a decimal string.`)
+  }
+  return normalizeDecimalValue(value, fieldName)
 }
 
 function dateValue(value, fieldName) {
@@ -171,13 +172,13 @@ function updateNodeField(node, projectMode, field, value) {
   }
   if (field === 'value') {
     if (node.type !== 'value') throw new Error('value is only editable on a Value node.')
-    return { ...node, value: finiteNumberValue(value, field) }
+    return { ...node, value: decimalStringValue(value, field) }
   }
   if (field === 'referenceValue') {
     if (node.type !== 'percentage') {
       throw new Error('referenceValue is only editable on a Percentage node.')
     }
-    return { ...node, referenceValue: finiteNumberValue(value, field) }
+    return { ...node, referenceValue: decimalStringValue(value, field) }
   }
   if (field === 'percentage.value') {
     if (node.type !== 'percentage') {
@@ -185,7 +186,7 @@ function updateNodeField(node, projectMode, field, value) {
     }
     return {
       ...node,
-      percentage: { ...node.percentage, value: finiteNumberValue(value, field) },
+      percentage: { ...node.percentage, value: decimalStringValue(value, field) },
     }
   }
   if (field === 'timing.value') {
@@ -261,7 +262,7 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
     {
       name: 'edit_project_node',
       description:
-        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select the node by exactly one of nodeName or nodeId. Set isStatic to true when the node’s Value or Percentage number must not change from operations applied by cards below; set it to false to allow those operations to change the number. A Value node value is applied to the value field of its node or nodes above using the operation selected on the current Value node. For a Percentage node with a non-zero referenceValue, calculate the percentage amount from that reference and apply it to each above node value using the selected operation. When referenceValue is 0, process above nodes one by one: calculate a separate percentage amount from each node’s current value, then apply that amount back to the same node value using the selected operation. Use get_project_nodes first when the node identity or current structure is unknown. Structural fields such as UUID, index, type, and relations cannot be changed.',
+        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. Set isStatic to true to protect that card’s number from operations coming from below; static cards can still operate upward. A running node traverses all higher levels and changes every non-static Value node it reaches. Value sources use their own Value as the operand. Percentage sources calculate an amount from each target Value when referenceValue is 0, or one shared amount from a non-zero referenceValue, then apply their selected operation. Use get_project_nodes first when identity or structure is unknown. UUID, index, type, and relations cannot be changed.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -274,7 +275,7 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
           },
           value: {
             description:
-              'Required replacement value. Its type must match the selected field: string, number, or boolean.',
+              'Required replacement value. Use a decimal string for value, percentage.value, or referenceValue to preserve large and high-precision values.',
             oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
           },
         },

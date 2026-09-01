@@ -4,6 +4,7 @@ import {
   addProjectNodeRight,
   getProject,
 } from '../services/projectStorage.js'
+import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 
 const operations = ['+', '-', '/', '*', '%']
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
@@ -38,18 +39,17 @@ function requiredInteger(value, fieldName, minimum = Number.NEGATIVE_INFINITY, m
   return value
 }
 
-function requiredNumber(value, fieldName) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`${fieldName} must be a finite number.`)
-  }
-
-  return value
-}
-
 function optionalBoolean(value, defaultValue, fieldName) {
   if (value === undefined) return defaultValue
   if (typeof value !== 'boolean') throw new Error(`${fieldName} must be a boolean.`)
   return value
+}
+
+function requiredDecimalString(value, fieldName) {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be supplied as a decimal string.`)
+  }
+  return normalizeDecimalValue(value, fieldName)
 }
 
 function requiredString(value, fieldName) {
@@ -131,7 +131,7 @@ function createValueNodeInput(input, project) {
     type: 'value',
     operation: requiredEnum(input.operation, operations, 'operation'),
     isStatic: optionalBoolean(input.isStatic, false, 'isStatic'),
-    value: requiredNumber(input.value, 'value'),
+    value: requiredDecimalString(input.value, 'value'),
     timing: {
       value: requiredInteger(input.time, 'time', 0),
       unit: requiredEnum(input.timeUnit, timeUnits, 'timeUnit'),
@@ -207,7 +207,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
     {
       name: 'create_value_node',
       description:
-        'Create a Value node in the currently open Time&Dime project. isStatic is optional and defaults to false. When isStatic is true, this node’s Value number does not change when operations from cards below are applied to it. The value stored on the Value node is applied to its node or nodes above using the arithmetic operation selected on the current Value node. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode: duration boundaries for duration projects, or date-time boundaries for date-time projects.',
+        'Create a Value node in the currently open Time&Dime project. When it runs, its selected operation and Value are applied to every transitive Value node above it until the graph has no higher nodes. Static target Value nodes are skipped but do not block traversal. isStatic is optional and defaults to false; it protects this node from operations coming from below but does not prevent this node from operating upward. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -232,12 +232,13 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
             type: 'string',
             enum: operations,
             description:
-              'Required arithmetic operation used to apply this Value node value to its node or nodes above: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+              'Required arithmetic operation used to apply this node Value to every non-static transitive Value node above it: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           value: {
-            type: 'number',
+            type: 'string',
+            minLength: 1,
             description:
-              'Required finite value applied to the node or nodes above using this Value node selected operation. Decimal and negative values are allowed.',
+              'Required finite decimal applied to the node or nodes above using this Value node selected operation. Send it as a decimal string to preserve very large or high-precision values. Negative values are allowed.',
           },
           isStatic: {
             type: 'boolean',

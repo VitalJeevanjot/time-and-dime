@@ -60,7 +60,7 @@ export function createValueNode(node = {}) {
   return {
     ...createBaseNode('value', node),
     isStatic: node.isStatic ?? false,
-    value: node.value ?? 0,
+    value: node.value ?? '0',
   }
 }
 
@@ -68,9 +68,9 @@ export function createPercentageNode(node = {}) {
   return {
     ...createBaseNode('percentage', node),
     isStatic: node.isStatic ?? true,
-    referenceValue: node.referenceValue ?? 0,
+    referenceValue: node.referenceValue ?? '0',
     percentage: {
-      value: node.percentage?.value ?? 0,
+      value: node.percentage?.value ?? '0',
     },
   }
 }

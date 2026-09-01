@@ -9,6 +9,7 @@ import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTo
 import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
 import { calculateProjectDurationInMilliseconds } from '../utils/calculation.js'
 import { createProjectRunScheduler } from '../utils/projectRunScheduler.js'
+import { applyNodeToAboveValueNodes } from '../utils/nodeValuePropagation.js'
 import {
   addProjectNode,
   addProjectNodeAbove,
@@ -152,7 +153,13 @@ function runProject() {
     project: project.value,
     projectEndTimeInMilliseconds,
     getProject: () => project.value,
-    onNodeRun: (runEvent) => console.log(runEvent),
+    onNodeRun: (runEvent) => {
+      const calculation = applyNodeToAboveValueNodes(project.value, runEvent.id)
+      if (calculation.updates.length > 0) {
+        project.value = updateProject(calculation.project)
+      }
+      console.log({ ...runEvent, updates: calculation.updates })
+    },
     onError: (error) => console.error('Project run failed.', error),
   })
 

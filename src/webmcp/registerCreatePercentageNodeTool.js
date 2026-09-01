@@ -4,6 +4,7 @@ import {
   addProjectNodeRight,
   getProject,
 } from '../services/projectStorage.js'
+import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 
 const operations = ['+', '-', '/', '*', '%']
 const nodeTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
@@ -50,17 +51,17 @@ function requiredInteger(value, fieldName, minimum = Number.NEGATIVE_INFINITY, m
   return value
 }
 
-function requiredNumber(value, fieldName) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`${fieldName} must be a finite number.`)
-  }
-  return value
-}
-
 function optionalBoolean(value, defaultValue, fieldName) {
   if (value === undefined) return defaultValue
   if (typeof value !== 'boolean') throw new Error(`${fieldName} must be a boolean.`)
   return value
+}
+
+function requiredDecimalString(value, fieldName) {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be supplied as a decimal string.`)
+  }
+  return normalizeDecimalValue(value, fieldName)
 }
 
 function normalizeDurationBoundary(boundary, fieldName) {
@@ -144,10 +145,10 @@ function createPercentageNodeInput(input, project) {
     isStatic: optionalBoolean(input.isStatic, true, 'isStatic'),
     referenceValue:
       input.referenceValue === undefined
-        ? 0
-        : requiredNumber(input.referenceValue, 'referenceValue'),
+        ? '0'
+        : requiredDecimalString(input.referenceValue, 'referenceValue'),
     percentage: {
-      value: requiredNumber(input.percentage, 'percentage'),
+      value: requiredDecimalString(input.percentage, 'percentage'),
     },
     timing: {
       value: requiredInteger(input.time, 'time', 0),
@@ -191,7 +192,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
     {
       name: 'create_percentage_node',
       description:
-        'Create a Percentage node in the currently open Time&Dime project. isStatic is optional and defaults to true. When isStatic is true, this node’s Percentage number does not change when operations from cards below are applied to it. referenceValue is optional and defaults to 0. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply that calculated amount to the value field of each node above using the Percentage node selected operation. When referenceValue is 0, process the nodes above one by one: first calculate the percentage amount from each above node’s current value, then apply that calculated amount back to that same node value using the selected operation. Identify the target by exactly one of targetNodeName or targetNodeId. "above" creates a level above the target, "right" adds to its horizontal level, and "bottom" creates below its level. Bottom inserts between connected levels when a lower level exists, or creates a new lowest level when the target is already lowest. The optional timeLimit must match the project interval mode.',
+        'Create a Percentage node in the currently open Time&Dime project. When it runs, it applies its operation to every non-static transitive Value node above it. With referenceValue 0, it calculates a separate percentage amount from each target’s current Value. With a non-zero referenceValue, it calculates one shared percentage amount from that reference. Static targets are skipped but do not block traversal. isStatic defaults to true and protects this Percentage from incoming operations without preventing its upward operation. Identify the placement target by exactly one of targetNodeName or targetNodeId. "above" creates a level above, "right" adds to the horizontal level, and "bottom" creates below. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -216,12 +217,13 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             type: 'string',
             enum: operations,
             description:
-              'Required arithmetic operation applied to each above node value. When referenceValue is non-zero, apply the percentage amount calculated from referenceValue. When referenceValue is 0, calculate a separate percentage amount from each above node’s current value and apply it back to that same node, one by one. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+              'Required operation applied to every non-static transitive Value node above. The operand is the percentage amount calculated per target when referenceValue is 0, or the shared amount calculated from a non-zero referenceValue. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           percentage: {
-            type: 'number',
+            type: 'string',
+            minLength: 1,
             description:
-              'Required finite percentage; decimal and negative values are allowed. When referenceValue is 0, use this percentage to calculate an amount from each above node’s current value separately before applying that amount back to the same node’s value. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply it to above-node values one by one using the selected operation.',
+              'Required finite percentage. Send it as a decimal string to preserve very large or high-precision values; negative values are allowed. When referenceValue is 0, calculate a separate amount from each above Value node. Otherwise calculate the amount from referenceValue.',
           },
           isStatic: {
             type: 'boolean',
@@ -229,9 +231,10 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
               'Optional; defaults to true. When true, this node’s Percentage number will not change when operations from cards below are applied to it.',
           },
           referenceValue: {
-            type: 'number',
+            type: 'string',
+            minLength: 1,
             description:
-              'Optional finite number that defaults to 0; decimal and negative values are allowed. When non-zero, calculate the percentage amount from this reference and apply it to each above node value using this node operation. When 0, calculate the percentage amount independently from each above node’s current value, then apply it back to that same node value one by one.',
+              'Optional finite decimal that defaults to 0. Send it as a decimal string to preserve very large or high-precision values. When non-zero, calculate one shared percentage amount from it; when 0, calculate each amount from its target Value node.',
           },
           time: {
             type: 'integer',

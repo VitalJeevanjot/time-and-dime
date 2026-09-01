@@ -1,7 +1,9 @@
 <script setup>
+import { ref, watch } from 'vue'
 import OperationPicker from './shared/OperationPicker.vue'
 import StaticToggle from './shared/StaticToggle.vue'
 import TimeLimit from './shared/TimeLimit.vue'
+import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 
 defineProps({
   timeLimitType: {
@@ -15,8 +17,8 @@ const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
 const isStatic = defineModel('isStatic', { type: Boolean, default: true })
-const referenceValue = defineModel('referenceValue', { type: Number, default: 0 })
-const percentage = defineModel('percentage', { type: Number, default: 0 })
+const referenceValue = defineModel('referenceValue', { type: [String, Number], default: '0' })
+const percentage = defineModel('percentage', { type: [String, Number], default: '0' })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
 const timeLimitEnabled = defineModel('timeLimitEnabled', { type: Boolean, default: false })
@@ -43,10 +45,43 @@ const timeLimit = defineModel('timeLimit', {
 })
 
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
+const percentageDraft = ref(normalizeValue(percentage.value))
+const referenceValueDraft = ref(normalizeValue(referenceValue.value))
 
-function toFiniteNumber(input) {
-  const number = Number(input)
-  return Number.isFinite(number) ? number : 0
+watch(percentage, (nextPercentage) => {
+  percentageDraft.value = normalizeValue(nextPercentage)
+})
+
+watch(referenceValue, (nextReferenceValue) => {
+  referenceValueDraft.value = normalizeValue(nextReferenceValue)
+})
+
+function normalizeValue(input) {
+  try {
+    return normalizeDecimalValue(input)
+  } catch {
+    return '0'
+  }
+}
+
+function commitPercentage() {
+  try {
+    const normalizedPercentage = normalizeDecimalValue(percentageDraft.value)
+    percentage.value = normalizedPercentage
+    percentageDraft.value = normalizedPercentage
+  } catch {
+    percentageDraft.value = normalizeValue(percentage.value)
+  }
+}
+
+function commitReferenceValue() {
+  try {
+    const normalizedReferenceValue = normalizeDecimalValue(referenceValueDraft.value)
+    referenceValue.value = normalizedReferenceValue
+    referenceValueDraft.value = normalizedReferenceValue
+  } catch {
+    referenceValueDraft.value = normalizeValue(referenceValue.value)
+  }
 }
 
 function toNonNegativeInteger(input) {
@@ -64,12 +99,12 @@ function toNonNegativeInteger(input) {
       <span class="static-value-row">
         <span class="percentage-input">
           <input
-            v-model.number="percentage"
+            v-model="percentageDraft"
             name="percentage"
-            type="number"
-            step="any"
+            type="text"
+            inputmode="decimal"
             aria-label="Percentage"
-            @change="percentage = toFiniteNumber(percentage)"
+            @change="commitPercentage"
           />
           <span class="percentage-symbol" aria-hidden="true">%</span>
         </span>
@@ -80,11 +115,11 @@ function toNonNegativeInteger(input) {
     <label class="field">
       <span>Reference Value</span>
       <input
-        v-model.number="referenceValue"
+        v-model="referenceValueDraft"
         name="referenceValue"
-        type="number"
-        step="any"
-        @change="referenceValue = toFiniteNumber(referenceValue)"
+        type="text"
+        inputmode="decimal"
+        @change="commitReferenceValue"
       />
     </label>
     

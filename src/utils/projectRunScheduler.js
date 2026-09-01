@@ -35,6 +35,39 @@ function findNextVirtualTime(nodeRunTimes) {
     }, null)
 }
 
+/** Orders simultaneous events from lower graph levels to higher graph levels. */
+function orderRunTimesBottomToTop(nodeRunTimes, project) {
+  const nodesById = new Map(project.nodes.map((node) => [node.id, node]))
+  const nodePositions = new Map(project.nodes.map((node, index) => [node.id, index]))
+  const depthByNodeId = new Map()
+
+  function getDepthFromTop(nodeId, activePath = new Set()) {
+    if (depthByNodeId.has(nodeId)) return depthByNodeId.get(nodeId)
+    if (activePath.has(nodeId)) return 0
+
+    const node = nodesById.get(nodeId)
+    if (!node) throw new Error(`Node ${nodeId} was not found.`)
+
+    const nextPath = new Set(activePath)
+    nextPath.add(nodeId)
+    const aboveNodeIds = node.relations?.aboveCardIds ?? []
+    const depth =
+      aboveNodeIds.length === 0
+        ? 0
+        : 1 + Math.max(...aboveNodeIds.map((aboveNodeId) => getDepthFromTop(aboveNodeId, nextPath)))
+
+    depthByNodeId.set(nodeId, depth)
+    return depth
+  }
+
+  return [...nodeRunTimes].sort((firstRunTime, secondRunTime) => {
+    const depthDifference =
+      getDepthFromTop(secondRunTime.id) - getDepthFromTop(firstRunTime.id)
+    if (depthDifference !== 0) return depthDifference
+    return nodePositions.get(firstRunTime.id) - nodePositions.get(secondRunTime.id)
+  })
+}
+
 /** Extracts only the calculation fields belonging to the node's card type. */
 function getCardCalculationValues(node) {
   if (node.type === 'value') {
@@ -128,17 +161,25 @@ export function createProjectRunScheduler({
         return
       }
 
-      const currentProject = getProject()
-      if (!Array.isArray(currentProject?.nodes)) {
+      const projectAtCurrentTime = getProject()
+      if (!Array.isArray(projectAtCurrentTime?.nodes)) {
         throw new Error('The current project and its nodes are required while running.')
       }
 
-      const dueNodeRunTimes = nodeRunTimes.filter(
-        (nodeRunTime) =>
-          canNodeRun(nodeRunTime) && nodeRunTime.next_time_to_run === nextVirtualTime,
+      const dueNodeRunTimes = orderRunTimesBottomToTop(
+        nodeRunTimes.filter(
+          (nodeRunTime) =>
+            canNodeRun(nodeRunTime) && nodeRunTime.next_time_to_run === nextVirtualTime,
+        ),
+        projectAtCurrentTime,
       )
 
-      const runEvents = dueNodeRunTimes.map((nodeRunTime) => {
+      dueNodeRunTimes.forEach((nodeRunTime) => {
+        const currentProject = getProject()
+        if (!Array.isArray(currentProject?.nodes)) {
+          throw new Error('The current project and its nodes are required while running.')
+        }
+
         const currentNode = currentProject.nodes.find((node) => node.id === nodeRunTime.id)
         if (!currentNode) throw new Error(`Node ${nodeRunTime.id} was not found.`)
 
@@ -146,16 +187,17 @@ export function createProjectRunScheduler({
         nodeRunTime.cardValues = cardValues
         nodeRunTime.next_time_to_run += nodeRunTime.time
 
-        return {
+        const runEvent = {
           id: nodeRunTime.id,
           virtualTime: nextVirtualTime,
           cardValues: { ...cardValues },
           next_time_to_run: nodeRunTime.next_time_to_run,
           end_time: nodeRunTime.end_time,
         }
+
+        onNodeRun(runEvent)
       })
 
-      runEvents.forEach(onNodeRun)
       queuedTaskId = taskQueue.schedule(processNextVirtualTime)
     } catch (error) {
       failRun(error)

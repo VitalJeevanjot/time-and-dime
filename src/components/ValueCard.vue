@@ -1,7 +1,9 @@
 <script setup>
+import { ref, watch } from 'vue'
 import OperationPicker from './shared/OperationPicker.vue'
 import StaticToggle from './shared/StaticToggle.vue'
 import TimeLimit from './shared/TimeLimit.vue'
+import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 
 defineProps({
   timeLimitType: {
@@ -15,7 +17,7 @@ const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
 const isStatic = defineModel('isStatic', { type: Boolean, default: false })
-const value = defineModel('value', { type: Number, default: 0 })
+const value = defineModel('value', { type: [String, Number], default: '0' })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
 const timeLimitEnabled = defineModel('timeLimitEnabled', { type: Boolean, default: false })
@@ -42,10 +44,28 @@ const timeLimit = defineModel('timeLimit', {
 })
 
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
+const valueDraft = ref(normalizeValue(value.value))
 
-function toFiniteNumber(input) {
-  const number = Number(input)
-  return Number.isFinite(number) ? number : 0
+watch(value, (nextValue) => {
+  valueDraft.value = normalizeValue(nextValue)
+})
+
+function normalizeValue(input) {
+  try {
+    return normalizeDecimalValue(input)
+  } catch {
+    return '0'
+  }
+}
+
+function commitValue() {
+  try {
+    const normalizedValue = normalizeDecimalValue(valueDraft.value)
+    value.value = normalizedValue
+    valueDraft.value = normalizedValue
+  } catch {
+    valueDraft.value = normalizeValue(value.value)
+  }
 }
 
 function toNonNegativeInteger(input) {
@@ -62,12 +82,12 @@ function toNonNegativeInteger(input) {
       <span>Value</span>
       <span class="static-value-row">
         <input
-          v-model.number="value"
+          v-model="valueDraft"
           name="value"
-          type="number"
-          step="any"
+          type="text"
+          inputmode="decimal"
           aria-label="Value"
-          @change="value = toFiniteNumber(value)"
+          @change="commitValue"
         />
         <StaticToggle v-model="isStatic" />
       </span>
