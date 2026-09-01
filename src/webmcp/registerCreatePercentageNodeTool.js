@@ -50,9 +50,9 @@ function requiredInteger(value, fieldName, minimum = Number.NEGATIVE_INFINITY, m
   return value
 }
 
-function requiredPercentage(value) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) {
-    throw new Error('percentage must be a number from 0 to 100.')
+function requiredNumber(value, fieldName) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${fieldName} must be a finite number.`)
   }
   return value
 }
@@ -135,8 +135,12 @@ function createPercentageNodeInput(input, project) {
   return {
     type: 'percentage',
     operation: requiredEnum(input.operation, operations, 'operation'),
+    referenceValue:
+      input.referenceValue === undefined
+        ? 0
+        : requiredNumber(input.referenceValue, 'referenceValue'),
     percentage: {
-      value: requiredPercentage(input.percentage),
+      value: requiredNumber(input.percentage, 'percentage'),
     },
     timing: {
       value: requiredInteger(input.time, 'time', 0),
@@ -180,7 +184,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
     {
       name: 'create_percentage_node',
       description:
-        'Create a Percentage node in the currently open Time&Dime project. Identify the target by exactly one of targetNodeName or targetNodeId. "above" creates a level above the target, "right" adds to its horizontal level, and "bottom" creates below its level. Bottom inserts between connected levels when a lower level exists, or creates a new lowest level when the target is already lowest. The optional timeLimit must match the project interval mode.',
+        'Create a Percentage node in the currently open Time&Dime project. referenceValue is optional and defaults to 0. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply that calculated amount to the value field of each node above using the Percentage node selected operation. When referenceValue is 0, process the nodes above one by one: first calculate the percentage amount from each above node’s current value, then apply that calculated amount back to that same node value using the selected operation. Identify the target by exactly one of targetNodeName or targetNodeId. "above" creates a level above the target, "right" adds to its horizontal level, and "bottom" creates below its level. Bottom inserts between connected levels when a lower level exists, or creates a new lowest level when the target is already lowest. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -204,13 +208,18 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           operation: {
             type: 'string',
             enum: operations,
-            description: 'Required arithmetic operation: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+            description:
+              'Required arithmetic operation applied to each above node value. When referenceValue is non-zero, apply the percentage amount calculated from referenceValue. When referenceValue is 0, calculate a separate percentage amount from each above node’s current value and apply it back to that same node, one by one. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           percentage: {
             type: 'number',
-            minimum: 0,
-            maximum: 100,
-            description: 'Required percentage from 0 through 100.',
+            description:
+              'Required finite percentage; decimal and negative values are allowed. When referenceValue is 0, use this percentage to calculate an amount from each above node’s current value separately before applying that amount back to the same node’s value. When referenceValue is non-zero, calculate the percentage amount from referenceValue and apply it to above-node values one by one using the selected operation.',
+          },
+          referenceValue: {
+            type: 'number',
+            description:
+              'Optional finite number that defaults to 0; decimal and negative values are allowed. When non-zero, calculate the percentage amount from this reference and apply it to each above node value using this node operation. When 0, calculate the percentage amount independently from each above node’s current value, then apply it back to that same node value one by one.',
           },
           time: {
             type: 'integer',

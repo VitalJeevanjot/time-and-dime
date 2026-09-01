@@ -13,7 +13,6 @@ defineProps({
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
-const referenceValue = defineModel('referenceValue', { type: Number, default: 0 })
 const value = defineModel('value', { type: Number, default: 0 })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
@@ -42,10 +41,14 @@ const timeLimit = defineModel('timeLimit', {
 
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
-// Keep negative for value because sometimes people might want to change value without chaging the node operation.
-function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
+function toFiniteNumber(input) {
   const number = Number(input)
-  return Number.isFinite(number) ? Math.max(minimum, Math.trunc(number)) : 0
+  return Number.isFinite(number) ? number : 0
+}
+
+function toNonNegativeInteger(input) {
+  const number = Number(input)
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0
 }
 </script>
 
@@ -59,19 +62,8 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
         v-model.number="value"
         name="value"
         type="number"
-        step="1"
-        @change="value = toInteger(value)"
-      />
-    </label>
-
-    <label class="field">
-      <span>Reference Value</span>
-      <input
-        v-model.number="referenceValue"
-        name="referenceValue"
-        type="number"
-        step="1"
-        @change="referenceValue = toInteger(referenceValue)"
+        step="any"
+        @change="value = toFiniteNumber(value)"
       />
     </label>
 
@@ -84,7 +76,7 @@ function toInteger(input, minimum = Number.NEGATIVE_INFINITY) {
           type="number"
           min="0"
           step="1"
-          @change="time = toInteger(time, 0)"
+          @change="time = toNonNegativeInteger(time)"
         />
         <select v-model="timeUnit" name="timeUnit" aria-label="Time unit">
           <option v-for="unit in timeUnits" :key="unit" :value="unit">

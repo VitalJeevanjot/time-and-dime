@@ -38,6 +38,14 @@ function requiredInteger(value, fieldName, minimum = Number.NEGATIVE_INFINITY, m
   return value
 }
 
+function requiredNumber(value, fieldName) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${fieldName} must be a finite number.`)
+  }
+
+  return value
+}
+
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error(`${fieldName} is required.`)
@@ -116,11 +124,7 @@ function createValueNodeInput(input, project) {
   return {
     type: 'value',
     operation: requiredEnum(input.operation, operations, 'operation'),
-    referenceValue:
-      input.referenceValue === undefined
-        ? 0
-        : requiredInteger(input.referenceValue, 'referenceValue'),
-    value: requiredInteger(input.value, 'value'),
+    value: requiredNumber(input.value, 'value'),
     timing: {
       value: requiredInteger(input.time, 'time', 0),
       unit: requiredEnum(input.timeUnit, timeUnits, 'timeUnit'),
@@ -196,7 +200,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
     {
       name: 'create_value_node',
       description:
-        'Create a Value node in the currently open Time&Dime project. referenceValue is an optional stable value that calculations do not modify, while value is required and can change. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode: duration boundaries for duration projects, or date-time boundaries for date-time projects.',
+        'Create a Value node in the currently open Time&Dime project. The value stored on the Value node is applied to its node or nodes above using the arithmetic operation selected on the current Value node. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode: duration boundaries for duration projects, or date-time boundaries for date-time projects.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -220,16 +224,13 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
           operation: {
             type: 'string',
             enum: operations,
-            description: 'Required arithmetic operation: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+            description:
+              'Required arithmetic operation used to apply this Value node value to its node or nodes above: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           value: {
-            type: 'integer',
-            description: 'Required integer value. Negative integers are allowed.',
-          },
-          referenceValue: {
-            type: 'integer',
+            type: 'number',
             description:
-              'Optional stable integer value that does not change when calculations are applied to the node. Defaults to 0.',
+              'Required finite value applied to the node or nodes above using this Value node selected operation. Decimal and negative values are allowed.',
           },
           time: {
             type: 'integer',

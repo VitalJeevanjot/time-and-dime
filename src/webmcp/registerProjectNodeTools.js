@@ -60,9 +60,9 @@ function integerValue(value, fieldName, minimum = Number.NEGATIVE_INFINITY, maxi
   return value
 }
 
-function numberValue(value, fieldName, minimum, maximum) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum || value > maximum) {
-    throw new Error(`${fieldName} must be a number from ${minimum} to ${maximum}.`)
+function finiteNumberValue(value, fieldName) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${fieldName} must be a finite number.`)
   }
   return value
 }
@@ -167,11 +167,13 @@ function updateNodeField(node, projectMode, field, value) {
   }
   if (field === 'value') {
     if (node.type !== 'value') throw new Error('value is only editable on a Value node.')
-    return { ...node, value: integerValue(value, field) }
+    return { ...node, value: finiteNumberValue(value, field) }
   }
   if (field === 'referenceValue') {
-    if (node.type !== 'value') throw new Error('referenceValue is only editable on a Value node.')
-    return { ...node, referenceValue: integerValue(value, field) }
+    if (node.type !== 'percentage') {
+      throw new Error('referenceValue is only editable on a Percentage node.')
+    }
+    return { ...node, referenceValue: finiteNumberValue(value, field) }
   }
   if (field === 'percentage.value') {
     if (node.type !== 'percentage') {
@@ -179,7 +181,7 @@ function updateNodeField(node, projectMode, field, value) {
     }
     return {
       ...node,
-      percentage: { ...node.percentage, value: numberValue(value, field, 0, 100) },
+      percentage: { ...node.percentage, value: finiteNumberValue(value, field) },
     }
   }
   if (field === 'timing.value') {
@@ -255,7 +257,7 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
     {
       name: 'edit_project_node',
       description:
-        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select the node by exactly one of nodeName or nodeId. Use get_project_nodes first when the node identity or current structure is unknown. Structural fields such as UUID, index, type, and relations cannot be changed.',
+        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select the node by exactly one of nodeName or nodeId. A Value node value is applied to the value field of its node or nodes above using the operation selected on the current Value node. For a Percentage node with a non-zero referenceValue, calculate the percentage amount from that reference and apply it to each above node value using the selected operation. When referenceValue is 0, process above nodes one by one: calculate a separate percentage amount from each node’s current value, then apply that amount back to the same node value using the selected operation. Use get_project_nodes first when the node identity or current structure is unknown. Structural fields such as UUID, index, type, and relations cannot be changed.',
       inputSchema: {
         type: 'object',
         properties: {

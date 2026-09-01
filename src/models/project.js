@@ -59,7 +59,6 @@ function createBaseNode(type, node = {}) {
 export function createValueNode(node = {}) {
   return {
     ...createBaseNode('value', node),
-    referenceValue: node.referenceValue ?? 0,
     value: node.value ?? 0,
   }
 }
@@ -67,6 +66,7 @@ export function createValueNode(node = {}) {
 export function createPercentageNode(node = {}) {
   return {
     ...createBaseNode('percentage', node),
+    referenceValue: node.referenceValue ?? 0,
     percentage: {
       value: node.percentage?.value ?? 0,
     },

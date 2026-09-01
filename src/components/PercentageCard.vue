@@ -13,6 +13,7 @@ defineProps({
 const operation = defineModel('operation', { type: String, default: '+' })
 const name = defineModel('name', { type: String, default: '' })
 const description = defineModel('description', { type: String, default: '' })
+const referenceValue = defineModel('referenceValue', { type: Number, default: 0 })
 const percentage = defineModel('percentage', { type: Number, default: 0 })
 const time = defineModel('time', { type: Number, default: 0 })
 const timeUnit = defineModel('timeUnit', { type: String, default: 'Seconds' })
@@ -41,9 +42,9 @@ const timeLimit = defineModel('timeLimit', {
 
 const timeUnits = ['Millisecond', 'Seconds', 'Minute', 'Hours', 'Days', 'Months', 'Years']
 
-function toPercentage(input) {
+function toFiniteNumber(input) {
   const number = Number(input)
-  return Number.isFinite(number) ? Math.min(100, Math.max(0, number)) : 0
+  return Number.isFinite(number) ? number : 0
 }
 
 function toNonNegativeInteger(input) {
@@ -63,13 +64,22 @@ function toNonNegativeInteger(input) {
           v-model.number="percentage"
           name="percentage"
           type="number"
-          min="0"
-          max="100"
-          step="0.1"
-          @change="percentage = toPercentage(percentage)"
+          step="any"
+          @change="percentage = toFiniteNumber(percentage)"
         />
         <span class="percentage-symbol" aria-hidden="true">%</span>
       </span>
+    </label>
+
+    <label class="field">
+      <span>Reference Value</span>
+      <input
+        v-model.number="referenceValue"
+        name="referenceValue"
+        type="number"
+        step="any"
+        @change="referenceValue = toFiniteNumber(referenceValue)"
+      />
     </label>
     
     <div class="field">
