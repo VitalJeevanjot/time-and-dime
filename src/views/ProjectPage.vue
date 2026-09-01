@@ -8,6 +8,10 @@ import { registerCreatePercentageNodeTool } from '../webmcp/registerCreatePercen
 import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
 import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
 import {
+  calculateProjectDurationInMilliseconds,
+  extractNodeRunTimesInMilliseconds,
+} from '../utils/calculation.js'
+import {
   addProjectNode,
   addProjectNodeAbove,
   addProjectNodeBelow,
@@ -139,6 +143,15 @@ function logStoredNode(nodeId) {
   if (storedNode) {
     console.log(JSON.stringify(storedNode, null, 2))
   }
+}
+
+function runProject() {
+  const projectEndTimeInMilliseconds = calculateProjectDurationInMilliseconds(project.value)
+  const nodeRunTimes = extractNodeRunTimesInMilliseconds(
+    project.value,
+    projectEndTimeInMilliseconds,
+  )
+  console.log(nodeRunTimes)
 }
 
 function getStoredProjectInfo() {
@@ -456,7 +469,12 @@ const nodeLevels = computed(() => {
         <output class="project-output-value" aria-label="Project output value">
           {{ projectOutputValue }}
         </output>
-        <button class="play-project-button" type="button" aria-label="Play project" @click.stop>
+        <button
+          class="play-project-button"
+          type="button"
+          aria-label="Play project"
+          @click.stop="runProject"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m9 6 9 6-9 6Z" />
           </svg>
