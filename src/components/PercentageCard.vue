@@ -42,7 +42,7 @@ const timeLimit = defineModel('timeLimit', {
   }),
 })
 
-const timeUnits = ['Millisecond', 'Seconds', 'Minute', 'Hours', 'Days', 'Months', 'Years']
+const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
 function toFiniteNumber(input) {
   const number = Number(input)

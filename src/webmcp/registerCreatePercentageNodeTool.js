@@ -6,7 +6,7 @@ import {
 } from '../services/projectStorage.js'
 
 const operations = ['+', '-', '/', '*', '%']
-const nodeTimeUnits = ['Millisecond', 'Seconds', 'Minute', 'Hours', 'Days', 'Months', 'Years']
+const nodeTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 const timeLimitUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
 const durationBoundarySchema = {

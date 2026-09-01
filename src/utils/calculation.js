@@ -1,8 +1,6 @@
 const millisecondsPerUnit = {
-  Millisecond: 1n,
   Milliseconds: 1n,
   Seconds: 1_000n,
-  Minute: 60_000n,
   Minutes: 60_000n,
   Hours: 3_600_000n,
   Days: 86_400_000n,

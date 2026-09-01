@@ -2,7 +2,7 @@ import { deleteProjectNode, getProject, updateProject } from '../services/projec
 
 const operations = ['+', '-', '/', '*', '%']
 const valueTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
-const percentageTimeUnits = ['Millisecond', 'Seconds', 'Minute', 'Hours', 'Days', 'Months', 'Years']
+const percentageTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 const timeLimitUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 const editableFields = [
   'operation',
