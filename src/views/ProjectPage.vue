@@ -9,7 +9,7 @@ import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTo
 import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
 import { calculateProjectDurationInMilliseconds } from '../utils/calculation.js'
 import { createProjectRunScheduler } from '../utils/projectRunScheduler.js'
-import { applyNodeToAboveValueNodes } from '../utils/nodeValuePropagation.js'
+import { applyNodeToImmediateAboveNodes } from '../utils/nodeValuePropagation.js'
 import {
   addProjectNode,
   addProjectNodeAbove,
@@ -154,7 +154,7 @@ function runProject() {
     projectEndTimeInMilliseconds,
     getProject: () => project.value,
     onNodeRun: (runEvent) => {
-      const calculation = applyNodeToAboveValueNodes(project.value, runEvent.id)
+      const calculation = applyNodeToImmediateAboveNodes(project.value, runEvent.id)
       if (calculation.updates.length > 0) {
         project.value = updateProject(calculation.project)
       }

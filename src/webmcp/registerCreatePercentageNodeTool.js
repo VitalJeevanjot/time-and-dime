@@ -192,7 +192,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
     {
       name: 'create_percentage_node',
       description:
-        'Create a Percentage node in the currently open Time&Dime project. When it runs, it applies its operation to every non-static transitive Value node above it. With referenceValue 0, it calculates a separate percentage amount from each target’s current Value. With a non-zero referenceValue, it calculates one shared percentage amount from that reference. Static targets are skipped but do not block traversal. isStatic defaults to true and protects this Percentage from incoming operations without preventing its upward operation. Identify the placement target by exactly one of targetNodeName or targetNodeId. "above" creates a level above, "right" adds to the horizontal level, and "bottom" creates below. The optional timeLimit must match the project interval mode.',
+        'Create a Percentage node in the currently open Time&Dime project. When it runs, it applies its operation only to directly connected, non-static nodes above. A Value target updates value; a Percentage target updates percentage.value. With referenceValue 0, the percentage amount is calculated separately from each target’s current calculation field. With a non-zero referenceValue, one shared amount is calculated from that reference. The operation never jumps to higher levels. isStatic defaults to true. Identify the placement target by exactly one of targetNodeName or targetNodeId. "above" creates a level above, "right" adds to the horizontal level, and "bottom" creates below. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -217,7 +217,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             type: 'string',
             enum: operations,
             description:
-              'Required operation applied to every non-static transitive Value node above. The operand is the percentage amount calculated per target when referenceValue is 0, or the shared amount calculated from a non-zero referenceValue. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+              'Required operation applied only to each non-static node directly above. The operand is calculated per target when referenceValue is 0, or from the shared non-zero referenceValue. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           percentage: {
             type: 'string',

@@ -262,7 +262,7 @@ export async function registerProjectNodeTools({ getProjectId, onProjectUpdated,
     {
       name: 'edit_project_node',
       description:
-        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. Set isStatic to true to protect that card’s number from operations coming from below; static cards can still operate upward. A running node traverses all higher levels and changes every non-static Value node it reaches. Value sources use their own Value as the operand. Percentage sources calculate an amount from each target Value when referenceValue is 0, or one shared amount from a non-zero referenceValue, then apply their selected operation. Use get_project_nodes first when identity or structure is unknown. UUID, index, type, and relations cannot be changed.',
+        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. Set isStatic to true to protect that card’s calculation number from operations coming from directly below; static cards can still operate upward. A running node changes only its immediately connected, non-static nodes above: value on a Value target or percentage.value on a Percentage target. Value sources use their own Value as the operand. Percentage sources calculate from each immediate target when referenceValue is 0, or from one shared non-zero referenceValue. Use get_project_nodes first when identity or structure is unknown. UUID, index, type, and relations cannot be changed.',
       inputSchema: {
         type: 'object',
         properties: {

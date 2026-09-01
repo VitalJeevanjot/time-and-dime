@@ -207,7 +207,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
     {
       name: 'create_value_node',
       description:
-        'Create a Value node in the currently open Time&Dime project. When it runs, its selected operation and Value are applied to every transitive Value node above it until the graph has no higher nodes. Static target Value nodes are skipped but do not block traversal. isStatic is optional and defaults to false; it protects this node from operations coming from below but does not prevent this node from operating upward. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. If the target has a lower level, bottom inserts the new level between them; if the target is on the lowest level, bottom creates a new lowest level. The optional timeLimit must match the project interval mode.',
+        'Create a Value node in the currently open Time&Dime project. When it runs, its selected operation and Value are applied only to its directly connected nodes above. A mutable Value target updates value; a mutable Percentage target updates percentage.value. Static targets are skipped. The operation never jumps over the immediate level to higher nodes; those cards act upward only when their own schedules run. isStatic is optional and defaults to false. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. The optional timeLimit must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -232,7 +232,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
             type: 'string',
             enum: operations,
             description:
-              'Required arithmetic operation used to apply this node Value to every non-static transitive Value node above it: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+              'Required arithmetic operation applied only to each non-static node directly above: + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
           },
           value: {
             type: 'string',
