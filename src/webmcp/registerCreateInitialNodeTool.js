@@ -5,47 +5,16 @@ import { createValueNodeInput } from './registerCreateValueNodeTool.js'
 const operations = ['+', '-', '/', '*', '%']
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
-const durationBoundarySchema = {
-  type: 'object',
-  properties: {
-    value: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
-    unit: { type: 'string', enum: timeUnits },
-  },
-  required: ['value', 'unit'],
-  additionalProperties: false,
-}
-
-const dateTimeBoundarySchema = {
-  type: 'object',
-  properties: {
-    date: { type: 'string', format: 'date', maxLength: 10 },
-    hours: { type: 'integer', minimum: 0, maximum: 23 },
-    minutes: { type: 'integer', minimum: 0, maximum: 59 },
-    seconds: { type: 'integer', minimum: 0, maximum: 59 },
-  },
-  required: ['date', 'hours', 'minutes', 'seconds'],
-  additionalProperties: false,
-}
-
 const timeLimitSchema = {
+  type: 'object',
   description:
-    'Optional node time limit. Its boundary type must match the current project interval mode.',
-  oneOf: [
-    {
-      type: 'object',
-      title: 'Duration time limit',
-      properties: { from: durationBoundarySchema, until: durationBoundarySchema },
-      required: ['from', 'until'],
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      title: 'Date and time limit',
-      properties: { from: dateTimeBoundarySchema, until: dateTimeBoundarySchema },
-      required: ['from', 'until'],
-      additionalProperties: false,
-    },
-  ],
+    'Optional. Use {value, unit} boundaries for Duration, or {date, hours, minutes, seconds} for Date & time.',
+  properties: {
+    from: { type: 'object', description: 'Inclusive start boundary matching the project mode.' },
+    until: { type: 'object', description: 'Inclusive end boundary matching the project mode.' },
+  },
+  required: ['from', 'until'],
+  additionalProperties: false,
 }
 
 const commonProperties = {

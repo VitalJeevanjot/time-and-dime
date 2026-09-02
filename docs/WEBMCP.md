@@ -7,8 +7,19 @@ Time&Dime uses the imperative WebMCP API: each tool is registered with `document
 - `App.vue` registers cross-project tools once so they survive route changes.
 - `StartPage.vue` exposes the Create Project navigation operation.
 - `CreateProjectPage.vue` exposes project creation.
-- `ProjectPage.vue` exposes current-project and node operations.
+- `ProjectPage.vue` always exposes `set_project_toolset` and a small workflow-specific set of current-project tools.
 - Page-scoped registrations are aborted on unmount, preventing stale tools from operating on a page that is no longer visible.
+
+The project page defaults to the `build` toolset. An agent can call `set_project_toolset`
+to switch without navigating or reloading:
+
+- `build`: `get_project_nodes`, plus `create_initial_node` while empty or the Value and Percentage creation tools after the first node exists.
+- `edit`: `get_project_nodes`, `edit_project_node`, and `delete_project_node`.
+- `project`: `go_to_home`, `get_project_info`, and `delete_project`.
+
+The six cross-project tools remain available. This keeps a project page at no more than ten
+active tools and avoids sending mutually exclusive creation schemas to the browser agent.
+When the project changes between empty and non-empty, the build tools refresh automatically.
 
 ## Standard annotations
 
@@ -25,14 +36,23 @@ Mutating tools use `readOnlyHint: false`. Delete definitions also include `destr
 
 1. Call `list_projects`.
 2. Call `open_project` with the returned UUID.
-3. Call `get_project_info` or `get_project_nodes` when structure is needed.
+3. The default `build` toolset includes `get_project_nodes`. To read full project settings,
+   call `set_project_toolset` with `project`, then call `get_project_info`.
 
 ### Create
 
 1. Call `open_create_project`.
 2. Call `create_project` with the interval-dependent fields.
 3. Call `create_initial_node` while the project is empty.
-4. Use `create_value_node` or `create_percentage_node` for later placements.
+4. The build toolset automatically replaces it with `create_value_node` and
+   `create_percentage_node` after the first node is created.
+
+### Edit
+
+1. Call `set_project_toolset` with `edit`.
+2. Call `get_project_nodes` when an exact UUID is needed.
+3. Call `edit_project_node` or `delete_project_node`.
+4. Switch back to `build` to continue adding nodes.
 
 ### Calculate
 
@@ -49,6 +69,11 @@ Mutating tools use `readOnlyHint: false`. Delete definitions also include `destr
 ## Precision and schemas
 
 Calculation values are accepted as decimal strings, not JSON numbers. This prevents precision loss before Decimal.js receives a large integer or long decimal. Time fields remain bounded integers and use explicit unit enums.
+
+Creation schemas keep `timeLimit` boundaries intentionally compact. They describe the two
+accepted boundary shapes while execution code strictly validates the shape required by the
+project's interval mode. Tool descriptions stay within 500 characters and parameter
+descriptions within 150 characters so browser agents receive a compact configuration.
 
 The calculation tools impose limits before scheduling:
 

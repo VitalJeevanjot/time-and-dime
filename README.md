@@ -1,8 +1,7 @@
 # Time&Dime
+Time&Dime is a locally running, time based values calculation engine. You build a model using Value and Percentage cards, then run it through their own individual times, and see the results from the above card's value or use that value as input further.
 
-Time&Dime is a local-first, agent-operable scenario calculator. You build a timed graph of Value and Percentage cards, run it through deterministic virtual time, and compare how different scenarios change.
-
-The application exposes its core application operations as imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create projects, build graphs, calculate results, clone scenarios, and compare them with the same local data the user sees.
+The application uses imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create/delete projects, build/edit models, calculate/return results, clone, and compare them with the same local data the user sees.
 
 ## Why it exists
 
@@ -50,6 +49,7 @@ Global tools are available throughout the app. Route-scoped tools validate their
 | `compare_scenarios` | Global | Calculates 2–5 projects and compares selected final node values. |
 | `open_create_project` | Home | Opens the Create Project page. |
 | `create_project` | Create page | Creates and opens a Duration or Date & time project. |
+| `set_project_toolset` | Project | Switches the active project workflow between `build`, `edit`, and `project`. |
 | `create_initial_node` | Project route | Creates the first Value or Percentage card after verifying that the project is empty. |
 | `create_value_node` | Project | Places a Value card above, right, or below a target. |
 | `create_percentage_node` | Project | Places a Percentage card above, right, or below a target. |
@@ -103,7 +103,6 @@ Time&Dime has no application backend, user accounts, or cloud sync. Project reco
 - Scheduling is virtual-time simulation, not real-world waiting.
 - Calculation tools reject schedules above their interactive safety limits.
 - Project data is browser-local and has no built-in backup or cross-device sync.
-- The current visible output display is not yet wired to the detailed calculation result.
 
 ## AI-assisted development
 

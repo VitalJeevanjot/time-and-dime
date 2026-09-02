@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { getProject, saveProject } from '../src/services/projectStorage.js'
 import { registerCreateInitialNodeTool } from '../src/webmcp/registerCreateInitialNodeTool.js'
+import { createValueNodeInput } from '../src/webmcp/registerCreateValueNodeTool.js'
+import { createProjectToolsetManager } from '../src/webmcp/registerProjectToolsetTools.js'
 import { registerProjectWorkspaceTools } from '../src/webmcp/registerProjectWorkspaceTools.js'
 
 function installBrowserMocks() {
@@ -14,7 +16,17 @@ function installBrowserMocks() {
   }
   globalThis.document = {
     modelContext: {
-      registerTool: async (tool) => tools.set(tool.name, tool),
+      registerTool: async (tool, options = {}) => {
+        if (tools.has(tool.name)) throw new Error(`Tool ${tool.name} is already registered.`)
+        tools.set(tool.name, tool)
+        options.signal?.addEventListener(
+          'abort',
+          () => {
+            if (tools.get(tool.name) === tool) tools.delete(tool.name)
+          },
+          { once: true },
+        )
+      },
     },
   }
   return tools
@@ -180,10 +192,104 @@ test('create_initial_node creates exactly one first Value or Percentage card', a
     initialNodeSchema.oneOf[0].properties.time.maximum,
     Number.MAX_SAFE_INTEGER,
   )
-  assert.equal(
-    initialNodeSchema.oneOf[0].properties.timeLimit.oneOf[0].properties.from.properties.value.maximum,
-    Number.MAX_SAFE_INTEGER,
+  assert.equal(initialNodeSchema.oneOf[0].properties.timeLimit.properties.from.type, 'object')
+  assert.throws(
+    () =>
+      createValueNodeInput(
+        {
+          operation: '+',
+          value: '1',
+          time: 1,
+          timeUnit: 'Seconds',
+          timeLimit: {
+            from: { value: Number.MAX_SAFE_INTEGER + 1, unit: 'Seconds' },
+            until: { value: 2, unit: 'Seconds' },
+          },
+          name: 'Invalid time limit',
+        },
+        { endTime: { mode: 'duration' } },
+      ),
+    /timeLimit\.from\.value must be an integer/,
   )
+})
+
+test('project WebMCP toolsets stay within active count and metadata budgets', async () => {
+  const tools = installBrowserMocks()
+  let projectState = saveProject({
+    id: 'toolset-project',
+    name: 'Toolsets',
+    endTime: { mode: 'duration', duration: 1, durationUnit: 'Days' },
+    nodes: [],
+  })
+  const pageController = new AbortController()
+
+  await registerProjectWorkspaceTools({
+    router: { push: async () => {} },
+    getCurrentProjectId: () => projectState.id,
+    signal: pageController.signal,
+  })
+
+  const manager = createProjectToolsetManager({
+    getProjectId: () => projectState.id,
+    getProjectState: () => projectState,
+    onProjectUpdated: (updatedProject) => {
+      projectState = updatedProject
+    },
+    goHome: async () => {},
+    deleteCurrentProject: () => projectState,
+    getStoredProjectInfo: () => ({ ...projectState, nodeCount: projectState.nodes.length }),
+    signal: pageController.signal,
+  })
+  await manager.register()
+
+  const assertToolBudget = () => {
+    assert.ok(tools.size <= 10, `expected at most 10 active tools, received ${tools.size}`)
+    const metadataCharacters = [...tools.values()].reduce((total, tool) => {
+      const { execute: _execute, ...metadata } = tool
+      assert.ok(tool.description.length <= 500, `${tool.name} description exceeds 500 characters`)
+      return total + JSON.stringify(metadata).length
+    }, 0)
+    assert.ok(
+      metadataCharacters <= 12_000,
+      `expected at most 12000 metadata characters, received ${metadataCharacters}`,
+    )
+  }
+
+  assert.equal(tools.size, 9)
+  assert.equal(tools.has('create_initial_node'), true)
+  assert.equal(tools.has('get_project_nodes'), true)
+  assert.equal(tools.has('set_project_toolset'), true)
+  assertToolBudget()
+
+  tools.get('create_initial_node').execute({
+    nodeType: 'value',
+    operation: '+',
+    value: '10',
+    time: 1,
+    timeUnit: 'Seconds',
+    name: 'Root',
+  })
+  await manager.refreshBuildTools()
+  assert.equal(tools.has('create_initial_node'), false)
+  assert.equal(tools.has('create_value_node'), true)
+  assert.equal(tools.has('create_percentage_node'), true)
+  assertToolBudget()
+
+  await tools.get('set_project_toolset').execute({ toolset: 'edit' })
+  assert.equal(tools.has('create_value_node'), false)
+  assert.equal(tools.has('edit_project_node'), true)
+  assert.equal(tools.has('delete_project_node'), true)
+  assertToolBudget()
+
+  await tools.get('set_project_toolset').execute({ toolset: 'project' })
+  assert.equal(tools.has('edit_project_node'), false)
+  assert.equal(tools.has('go_to_home'), true)
+  assert.equal(tools.has('delete_project'), true)
+  assert.equal(tools.has('get_project_info'), true)
+  assertToolBudget()
+
+  manager.dispose()
+  pageController.abort()
 })
 
 test('scenario comparison pairs default nodes by stable index and rejects unlike fields', async () => {

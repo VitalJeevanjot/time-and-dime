@@ -9,25 +9,15 @@ import { normalizeDecimalValue } from '../utils/decimalCalculation.js'
 const operations = ['+', '-', '/', '*', '%']
 const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
-const durationBoundarySchema = {
+const timeLimitSchema = {
   type: 'object',
+  description:
+    'Optional. Use {value, unit} boundaries for Duration, or {date, hours, minutes, seconds} for Date & time.',
   properties: {
-    value: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
-    unit: { type: 'string', enum: timeUnits },
+    from: { type: 'object', description: 'Inclusive start boundary matching the project mode.' },
+    until: { type: 'object', description: 'Inclusive end boundary matching the project mode.' },
   },
-  required: ['value', 'unit'],
-  additionalProperties: false,
-}
-
-const dateTimeBoundarySchema = {
-  type: 'object',
-  properties: {
-    date: { type: 'string', format: 'date' },
-    hours: { type: 'integer', minimum: 0, maximum: 23 },
-    minutes: { type: 'integer', minimum: 0, maximum: 59 },
-    seconds: { type: 'integer', minimum: 0, maximum: 59 },
-  },
-  required: ['date', 'hours', 'minutes', 'seconds'],
+  required: ['from', 'until'],
   additionalProperties: false,
 }
 
@@ -226,7 +216,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
     {
       name: 'create_value_node',
       description:
-        'Create a Value node in the currently open Time&Dime project. When it runs, its selected operation and Value are applied only to its directly connected nodes above. A mutable Value target updates value; a mutable Percentage target updates percentage.value. Static targets are skipped. The operation never jumps over the immediate level to higher nodes; those cards act upward only when their own schedules run. isStatic is optional and defaults to false. Identify the target by exactly one of targetNodeName or targetNodeId, and provide a side. "above" creates a level above the target, "right" adds to the target horizontal level, and "bottom" creates below the target level. The optional timeLimit must match the project interval mode.',
+        'Create a Value node above, right of, or below one existing node in the open project. Its operation applies Value only to directly connected non-static nodes above: Value targets change value and Percentage targets change percentage.value. It never skips a level. Select exactly one target by ID or unique name. isStatic defaults to false. timeLimit is optional and must match the project interval mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -260,7 +250,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
             minLength: 1,
             maxLength: 10_050,
             description:
-              'Required finite decimal applied to the immediate node or nodes above using this Value node selected operation. Send it as a decimal string to preserve very large or high-precision values. Negative values are allowed.',
+              'Finite decimal operand sent as a string for large, precise, or negative values.',
           },
           isStatic: {
             type: 'boolean',
@@ -278,32 +268,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
             enum: timeUnits,
             description: 'Required unit for time.',
           },
-          timeLimit: {
-            description:
-              'Optional time limit. Supply duration boundaries when the project uses Duration, or date-time boundaries when it uses Date & time.',
-            oneOf: [
-              {
-                title: 'Duration time limit',
-                type: 'object',
-                properties: {
-                  from: durationBoundarySchema,
-                  until: durationBoundarySchema,
-                },
-                required: ['from', 'until'],
-                additionalProperties: false,
-              },
-              {
-                title: 'Date and time limit',
-                type: 'object',
-                properties: {
-                  from: dateTimeBoundarySchema,
-                  until: dateTimeBoundarySchema,
-                },
-                required: ['from', 'until'],
-                additionalProperties: false,
-              },
-            ],
-          },
+          timeLimit: timeLimitSchema,
           name: {
             type: 'string',
             minLength: 1,

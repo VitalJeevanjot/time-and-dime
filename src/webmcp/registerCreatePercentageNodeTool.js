@@ -10,25 +10,15 @@ const operations = ['+', '-', '/', '*', '%']
 const nodeTimeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 const timeLimitUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Months', 'Years']
 
-const durationBoundarySchema = {
+const timeLimitSchema = {
   type: 'object',
+  description:
+    'Optional. Use {value, unit} boundaries for Duration, or {date, hours, minutes, seconds} for Date & time.',
   properties: {
-    value: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
-    unit: { type: 'string', enum: timeLimitUnits },
+    from: { type: 'object', description: 'Inclusive start boundary matching the project mode.' },
+    until: { type: 'object', description: 'Inclusive end boundary matching the project mode.' },
   },
-  required: ['value', 'unit'],
-  additionalProperties: false,
-}
-
-const dateTimeBoundarySchema = {
-  type: 'object',
-  properties: {
-    date: { type: 'string', format: 'date' },
-    hours: { type: 'integer', minimum: 0, maximum: 23 },
-    minutes: { type: 'integer', minimum: 0, maximum: 59 },
-    seconds: { type: 'integer', minimum: 0, maximum: 59 },
-  },
-  required: ['date', 'hours', 'minutes', 'seconds'],
+  required: ['from', 'until'],
   additionalProperties: false,
 }
 
@@ -212,7 +202,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
     {
       name: 'create_percentage_node',
       description:
-        'Create a Percentage node in the currently open Time&Dime project. When it runs, it applies its operation only to directly connected, non-static nodes above. A Value target updates value; a Percentage target updates percentage.value. With referenceValue 0, the percentage amount is calculated separately from each target’s current calculation field. With a non-zero referenceValue, one shared amount is calculated from that reference. The operation never jumps to higher levels. isStatic defaults to true. Identify the placement target by exactly one of targetNodeName or targetNodeId. "above" creates a level above, "right" adds to the horizontal level, and "bottom" creates below. The optional timeLimit must match the project interval mode.',
+        'Create a Percentage node above, right of, or below one existing node. Its operation affects only directly connected non-static nodes above: Value targets change value and Percentage targets change percentage.value. With referenceValue 0, calculate from each target; otherwise use the reference. It never skips a level. Select one target by ID or unique name. isStatic defaults true. timeLimit must match the project mode.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -239,14 +229,14 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             type: 'string',
             enum: operations,
             description:
-              'Required operation applied only to each non-static node directly above. The operand is calculated per target when referenceValue is 0, or from the shared non-zero referenceValue. Operations are + Plus, - Minus, / Divide, * Multiply, or % Modulus.',
+              'Operation for immediate non-static targets; the operand uses each target or the non-zero referenceValue.',
           },
           percentage: {
             type: 'string',
             minLength: 1,
             maxLength: 10_050,
             description:
-              'Required finite percentage. Send it as a decimal string to preserve very large or high-precision values; negative values are allowed. When referenceValue is 0, calculate a separate amount from each immediate target’s current calculation field. Otherwise calculate the amount from referenceValue.',
+              'Finite percentage string. With referenceValue 0 it uses each immediate target; otherwise it uses the reference.',
           },
           isStatic: {
             type: 'boolean',
@@ -258,7 +248,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             minLength: 1,
             maxLength: 10_050,
             description:
-              'Optional finite decimal that defaults to 0. Send it as a decimal string to preserve very large or high-precision values. When non-zero, calculate one shared percentage amount from it; when 0, calculate each amount from its immediate target calculation field.',
+              'Optional decimal string. Non-zero creates one shared amount; 0 uses each immediate target field.',
           },
           time: {
             type: 'integer',
@@ -271,26 +261,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
             enum: nodeTimeUnits,
             description: 'Required unit for time.',
           },
-          timeLimit: {
-            description:
-              'Optional time limit. Supply duration boundaries for a Duration project or date-time boundaries for a Date & time project.',
-            oneOf: [
-              {
-                title: 'Duration time limit',
-                type: 'object',
-                properties: { from: durationBoundarySchema, until: durationBoundarySchema },
-                required: ['from', 'until'],
-                additionalProperties: false,
-              },
-              {
-                title: 'Date and time limit',
-                type: 'object',
-                properties: { from: dateTimeBoundarySchema, until: dateTimeBoundarySchema },
-                required: ['from', 'until'],
-                additionalProperties: false,
-              },
-            ],
-          },
+          timeLimit: timeLimitSchema,
           name: {
             type: 'string',
             minLength: 1,

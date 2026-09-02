@@ -30,6 +30,12 @@ const editableFields = [
   'timeLimit.until.seconds',
 ]
 
+export const projectNodeToolNames = [
+  'get_project_nodes',
+  'edit_project_node',
+  'delete_project_node',
+]
+
 function getStoredProject(projectId) {
   const project = getProject(projectId)
   if (!project) throw new Error(`Project ${projectId} was not found.`)
@@ -234,105 +240,127 @@ const targetProperties = {
   },
 }
 
-export async function registerProjectNodeTools({ getProjectId, onProjectUpdated, signal }) {
+export async function registerProjectNodeTools({
+  getProjectId,
+  onProjectUpdated,
+  signal,
+  toolNames = projectNodeToolNames,
+}) {
   if (!document.modelContext?.registerTool) return
 
-  await document.modelContext.registerTool(
-    {
-      name: 'get_project_nodes',
-      description:
-        'Read and return every structured node in the currently open Time&Dime project, including node names, UUIDs, card values, timing, time limits, and graph relations.',
-      inputSchema: {
-        type: 'object',
-        properties: {},
-        additionalProperties: false,
-      },
-      execute: () => {
-        const projectId = requiredString(getProjectId(), 'projectId')
-        const project = getStoredProject(projectId)
-        return JSON.stringify({ projectId, nodeCount: project.nodes.length, nodes: project.nodes }, null, 2)
-      },
-      annotations: {
-        readOnlyHint: true,
-        untrustedContentHint: true,
-      },
-    },
-    { signal },
+  const requestedToolNames = new Set(toolNames)
+  const unknownToolNames = [...requestedToolNames].filter(
+    (toolName) => !projectNodeToolNames.includes(toolName),
   )
+  if (unknownToolNames.length > 0) {
+    throw new Error(`Unknown project node tool: ${unknownToolNames.join(', ')}.`)
+  }
 
-  await document.modelContext.registerTool(
-    {
-      name: 'edit_project_node',
-      description:
-        'Edit one user-controlled field on a node in the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. Set isStatic to true to protect that card’s calculation number from operations coming from directly below; static cards can still operate upward. A running node changes only its immediately connected, non-static nodes above: value on a Value target or percentage.value on a Percentage target. Value sources use their own Value as the operand. Percentage sources calculate from each immediate target when referenceValue is 0, or from one shared non-zero referenceValue. Use get_project_nodes first when identity or structure is unknown. UUID, index, type, and relations cannot be changed.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          ...targetProperties,
-          field: {
-            type: 'string',
-            enum: editableFields,
-            description:
-              'Required structured path of the editable card field. isStatic controls whether operations from cards below may change this node’s Value or Percentage number.',
-          },
-          value: {
-            description:
-              'Required replacement value. Use a decimal string for value, percentage.value, or referenceValue to preserve large and high-precision values.',
-            oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
-          },
+  if (requestedToolNames.has('get_project_nodes')) {
+    await document.modelContext.registerTool(
+      {
+        name: 'get_project_nodes',
+        description:
+          'Read every structured node in the open Time&Dime project, including values, timing, time limits, and graph relations.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
         },
-        required: ['field', 'value'],
-        oneOf: [{ required: ['nodeId'] }, { required: ['nodeName'] }],
-        additionalProperties: false,
+        execute: () => {
+          const projectId = requiredString(getProjectId(), 'projectId')
+          const project = getStoredProject(projectId)
+          return JSON.stringify(
+            { projectId, nodeCount: project.nodes.length, nodes: project.nodes },
+            null,
+            2,
+          )
+        },
+        annotations: {
+          readOnlyHint: true,
+          untrustedContentHint: true,
+        },
       },
-      execute: (input) => {
-        const projectId = requiredString(getProjectId(), 'projectId')
-        const result = editProjectNode(projectId, input)
-        onProjectUpdated?.(result.updatedProject)
-        return JSON.stringify({ projectId, node: result.updatedNode }, null, 2)
-      },
-      annotations: {
-        readOnlyHint: false,
-        untrustedContentHint: true,
-      },
-    },
-    { signal },
-  )
+      { signal },
+    )
+  }
 
-  await document.modelContext.registerTool(
-    {
-      name: 'delete_project_node',
-      description:
-        'Permanently delete one node from the currently open Time&Dime project. Select it by exactly one of nodeName or nodeId. If a name is duplicated, use get_project_nodes to find the exact UUID. Connected levels are relinked by the project graph storage logic.',
-      inputSchema: {
-        type: 'object',
-        properties: targetProperties,
-        oneOf: [{ required: ['nodeId'] }, { required: ['nodeName'] }],
-        additionalProperties: false,
-      },
-      execute: (input) => {
-        const projectId = requiredString(getProjectId(), 'projectId')
-        const project = getStoredProject(projectId)
-        const node = resolveNode(project, input)
-        const updatedProject = deleteProjectNode(projectId, node.id)
-        onProjectUpdated?.(updatedProject)
-
-        return JSON.stringify(
-          {
-            projectId,
-            deletedNode: node,
-            remainingNodeCount: updatedProject.nodes.length,
+  if (requestedToolNames.has('edit_project_node')) {
+    await document.modelContext.registerTool(
+      {
+        name: 'edit_project_node',
+        description:
+          'Edit one user-controlled field on one node selected by exact ID or unique name. isStatic protects its calculation field from the level below. A node operates only on its immediate level above. Value sources use Value; Percentage sources use each target when referenceValue is 0, otherwise the reference. UUID, index, type, and relations are immutable.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ...targetProperties,
+            field: {
+              type: 'string',
+              enum: editableFields,
+              description: 'Structured path of the editable field; isStatic protects the calculation number.',
+            },
+            value: {
+              description:
+                'Replacement value. Use a decimal string for calculation fields to preserve precision.',
+              oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }],
+            },
           },
-          null,
-          2,
-        )
+          required: ['field', 'value'],
+          oneOf: [{ required: ['nodeId'] }, { required: ['nodeName'] }],
+          additionalProperties: false,
+        },
+        execute: (input) => {
+          const projectId = requiredString(getProjectId(), 'projectId')
+          const result = editProjectNode(projectId, input)
+          onProjectUpdated?.(result.updatedProject)
+          return JSON.stringify({ projectId, node: result.updatedNode }, null, 2)
+        },
+        annotations: {
+          readOnlyHint: false,
+          untrustedContentHint: true,
+        },
       },
-      annotations: {
-        readOnlyHint: false,
-        untrustedContentHint: true,
-        destructiveHint: true,
+      { signal },
+    )
+  }
+
+  if (requestedToolNames.has('delete_project_node')) {
+    await document.modelContext.registerTool(
+      {
+        name: 'delete_project_node',
+        description:
+          'Permanently delete one node selected by exact ID or unique name. If names repeat, read the nodes first and use the UUID. Graph storage relinks connected levels.',
+        inputSchema: {
+          type: 'object',
+          properties: targetProperties,
+          oneOf: [{ required: ['nodeId'] }, { required: ['nodeName'] }],
+          additionalProperties: false,
+        },
+        execute: (input) => {
+          const projectId = requiredString(getProjectId(), 'projectId')
+          const project = getStoredProject(projectId)
+          const node = resolveNode(project, input)
+          const updatedProject = deleteProjectNode(projectId, node.id)
+          onProjectUpdated?.(updatedProject)
+
+          return JSON.stringify(
+            {
+              projectId,
+              deletedNode: node,
+              remainingNodeCount: updatedProject.nodes.length,
+            },
+            null,
+            2,
+          )
+        },
+        annotations: {
+          readOnlyHint: false,
+          untrustedContentHint: true,
+          destructiveHint: true,
+        },
       },
-    },
-    { signal },
-  )
+      { signal },
+    )
+  }
 }

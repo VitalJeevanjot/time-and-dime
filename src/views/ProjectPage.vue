@@ -4,10 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
 import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
-import { registerCreatePercentageNodeTool } from '../webmcp/registerCreatePercentageNodeTool.js'
-import { registerCreateInitialNodeTool } from '../webmcp/registerCreateInitialNodeTool.js'
-import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
-import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
+import { createProjectToolsetManager } from '../webmcp/registerProjectToolsetTools.js'
 import { calculateProjectDurationInMilliseconds } from '../utils/calculation.js'
 import { createProjectRunScheduler } from '../utils/projectRunScheduler.js'
 import { applyNodeToImmediateAboveNodes } from '../utils/nodeValuePropagation.js'
@@ -26,12 +23,12 @@ const route = useRoute()
 const router = useRouter()
 const webMcpController = new AbortController()
 const project = ref(null)
-const projectOutputValue = ref(0)
 const showDetails = ref(false)
 const nodePickerOpen = ref(false)
 const nodePickerTargetId = ref(null)
 const nodePickerDirection = ref(null)
 let activeProjectRunScheduler = null
+let projectToolsetManager = null
 
 function closeNodePicker() {
   nodePickerOpen.value = false
@@ -208,150 +205,45 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => (project.value ? project.value.nodes.length === 0 : undefined),
+  (isEmpty, wasEmpty) => {
+    if (isEmpty === undefined || isEmpty === wasEmpty) return
+    void projectToolsetManager?.refreshBuildTools().catch((error) => {
+      if (!webMcpController.signal.aborted) {
+        console.warn('Could not refresh the WebMCP build tools.', error)
+      }
+    })
+  },
+)
+
 onMounted(async () => {
   if (!document.modelContext?.registerTool) return
 
-  try {
-    await document.modelContext.registerTool(
-      {
-        name: 'go_to_home',
-        description: 'Leave the current project and return to the Time&Dime home page.',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-          additionalProperties: false,
-        },
-        execute: async () => {
-          await router.push({ name: 'start' })
-          return 'Opened the Time&Dime home page.'
-        },
-        annotations: {
-          readOnlyHint: false,
-          untrustedContentHint: false,
-        },
-      },
-      { signal: webMcpController.signal },
-    )
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP go-home tool.', error)
-    }
-  }
+  projectToolsetManager = createProjectToolsetManager({
+    getProjectId: () => String(route.params.id),
+    getProjectState: () => project.value,
+    onProjectUpdated: (updatedProject) => {
+      project.value = updatedProject
+    },
+    goHome: () => router.push({ name: 'start' }),
+    deleteCurrentProject,
+    getStoredProjectInfo,
+    signal: webMcpController.signal,
+  })
 
   try {
-    await document.modelContext.registerTool(
-      {
-        name: 'delete_project',
-        description:
-          'Permanently delete the currently open Time&Dime project and all of its nodes from local storage, then return to the home page.',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-          additionalProperties: false,
-        },
-        execute: async () => {
-          const deletedProject = deleteCurrentProject()
-          await router.push({ name: 'start' })
-          return `Deleted project "${deletedProject.name}" with ID ${deletedProject.id}.`
-        },
-        annotations: {
-          readOnlyHint: false,
-          untrustedContentHint: true,
-          destructiveHint: true,
-        },
-      },
-      { signal: webMcpController.signal },
-    )
+    await projectToolsetManager.register()
   } catch (error) {
     if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP delete-project tool.', error)
-    }
-  }
-
-  try {
-    await document.modelContext.registerTool(
-      {
-        name: 'get_project_info',
-        description:
-          'Fetch the complete stored information for the currently open Time&Dime project, including its settings, node count, and structured node data.',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-          additionalProperties: false,
-        },
-        execute: () => JSON.stringify(getStoredProjectInfo(), null, 2),
-        annotations: {
-          readOnlyHint: true,
-          untrustedContentHint: true,
-        },
-      },
-      { signal: webMcpController.signal },
-    )
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP get-project-info tool.', error)
-    }
-  }
-
-  try {
-    await registerCreateInitialNodeTool({
-      getProjectId: () => String(route.params.id),
-      onProjectUpdated: (updatedProject) => {
-        project.value = updatedProject
-      },
-      signal: webMcpController.signal,
-    })
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP create-initial-node tool.', error)
-    }
-  }
-
-  try {
-    await registerCreateValueNodeTool({
-      getProjectId: () => String(route.params.id),
-      onProjectUpdated: (updatedProject) => {
-        project.value = updatedProject
-      },
-      signal: webMcpController.signal,
-    })
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP create-value-node tool.', error)
-    }
-  }
-
-  try {
-    await registerCreatePercentageNodeTool({
-      getProjectId: () => String(route.params.id),
-      onProjectUpdated: (updatedProject) => {
-        project.value = updatedProject
-      },
-      signal: webMcpController.signal,
-    })
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP create-percentage-node tool.', error)
-    }
-  }
-
-  try {
-    await registerProjectNodeTools({
-      getProjectId: () => String(route.params.id),
-      onProjectUpdated: (updatedProject) => {
-        project.value = updatedProject
-      },
-      signal: webMcpController.signal,
-    })
-  } catch (error) {
-    if (!webMcpController.signal.aborted) {
-      console.warn('Could not register the WebMCP project-node tools.', error)
+      console.warn('Could not register the WebMCP project toolsets.', error)
     }
   }
 })
 
 onUnmounted(() => {
   activeProjectRunScheduler?.stop()
+  projectToolsetManager?.dispose()
   webMcpController.abort()
 })
 
@@ -506,9 +398,6 @@ const nodeLevels = computed(() => {
 
     <div v-if="project.nodes.length" class="node-scroller">
       <div class="project-run-control">
-        <output class="project-output-value" aria-label="Project output value">
-          {{ projectOutputValue }}
-        </output>
         <button
           class="play-project-button"
           type="button"
@@ -918,29 +807,10 @@ dd {
   position: sticky;
   top: 1rem;
   z-index: 6;
-  display: flex;
+  display: grid;
   width: max-content;
   margin: 1rem auto -0.25rem;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.project-output-value {
-  display: block;
-  min-width: 7rem;
-  box-sizing: border-box;
-  padding: 0.55rem 1.4rem;
-  border: 1px solid #ff3ed1;
-  border-radius: 1rem;
-  background: #1c0a19;
-  color: #ffe66d;
-  font-family: "Avenir Next Rounded", "Nunito Sans", ui-rounded, system-ui, sans-serif;
-  font-size: 1.85rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  letter-spacing: 0.025em;
-  line-height: 1;
-  text-align: center;
+  place-items: center;
 }
 
 .play-project-button {
