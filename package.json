@@ -1,7 +1,23 @@
 {
   "name": "time-and-dime",
   "version": "0.0.0",
+  "description": "A local-first, WebMCP-enabled timed scenario calculator.",
   "private": true,
+  "license": "MIT",
+  "author": "Jeevanjot Singh Vital",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VitalJeevanjot/time-and-dime.git"
+  },
+  "bugs": "https://github.com/VitalJeevanjot/time-and-dime/issues",
+  "homepage": "https://github.com/VitalJeevanjot/time-and-dime#readme",
+  "keywords": [
+    "webmcp",
+    "vue",
+    "scenario-planning",
+    "simulation",
+    "local-first"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

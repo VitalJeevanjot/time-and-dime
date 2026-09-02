@@ -12,7 +12,7 @@ const timeUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', 'Month
 const durationBoundarySchema = {
   type: 'object',
   properties: {
-    value: { type: 'integer', minimum: 0 },
+    value: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
     unit: { type: 'string', enum: timeUnits },
   },
   required: ['value', 'unit'],
@@ -56,8 +56,24 @@ function requiredString(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error(`${fieldName} is required.`)
   }
+  const normalizedValue = value.trim()
+  if (normalizedValue.length > 200) {
+    throw new Error(`${fieldName} cannot be longer than 200 characters.`)
+  }
+  return normalizedValue
+}
 
-  return value.trim()
+function requiredDate(value, fieldName) {
+  const date = requiredString(value, fieldName)
+  const parsedDate = new Date(`${date}T00:00:00Z`)
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== date
+  ) {
+    throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format.`)
+  }
+  return date
 }
 
 function requiredEnum(value, allowedValues, fieldName) {
@@ -85,7 +101,7 @@ function normalizeDateTimeBoundary(boundary, fieldName) {
   }
 
   return {
-    date: requiredString(boundary.date, `${fieldName}.date`),
+    date: requiredDate(boundary.date, `${fieldName}.date`),
     hours: String(requiredInteger(boundary.hours, `${fieldName}.hours`, 0, 23)).padStart(2, '0'),
     minutes: String(requiredInteger(boundary.minutes, `${fieldName}.minutes`, 0, 59)).padStart(
       2,
@@ -121,10 +137,13 @@ function normalizeTimeLimit(timeLimit, projectMode) {
   }
 }
 
-function createValueNodeInput(input, project) {
+export function createValueNodeInput(input, project) {
   const description = input.description
   if (description !== undefined && typeof description !== 'string') {
     throw new Error('description must be a string when provided.')
+  }
+  if (description?.trim().length > 2_000) {
+    throw new Error('description cannot be longer than 2000 characters.')
   }
 
   return {
@@ -214,12 +233,14 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
           targetNodeId: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description:
               'Optional exact ID of the existing placement target. Use this instead of targetNodeName.',
           },
           targetNodeName: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description:
               'Optional Name-field value of the existing placement target. It must uniquely identify one node. Use this instead of targetNodeId.',
           },
@@ -237,8 +258,9 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
           value: {
             type: 'string',
             minLength: 1,
+            maxLength: 10_050,
             description:
-              'Required finite decimal applied to the node or nodes above using this Value node selected operation. Send it as a decimal string to preserve very large or high-precision values. Negative values are allowed.',
+              'Required finite decimal applied to the immediate node or nodes above using this Value node selected operation. Send it as a decimal string to preserve very large or high-precision values. Negative values are allowed.',
           },
           isStatic: {
             type: 'boolean',
@@ -248,7 +270,8 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
           time: {
             type: 'integer',
             minimum: 0,
-            description: 'Required non-negative integer time value.',
+            maximum: Number.MAX_SAFE_INTEGER,
+            description: 'Required non-negative safe-integer time value.',
           },
           timeUnit: {
             type: 'string',
@@ -284,10 +307,12 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
           name: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description: 'Required node name.',
           },
           description: {
             type: 'string',
+            maxLength: 2_000,
             description: 'Optional node description.',
           },
         },
@@ -315,7 +340,7 @@ export function registerCreateValueNodeTool({ getProjectId, onProjectUpdated, si
       },
       annotations: {
         readOnlyHint: false,
-        untrustedContentHint: false,
+        untrustedContentHint: true,
       },
     },
     { signal },

@@ -13,7 +13,7 @@ const timeLimitUnits = ['Milliseconds', 'Seconds', 'Minutes', 'Hours', 'Days', '
 const durationBoundarySchema = {
   type: 'object',
   properties: {
-    value: { type: 'integer', minimum: 0 },
+    value: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
     unit: { type: 'string', enum: timeLimitUnits },
   },
   required: ['value', 'unit'],
@@ -34,7 +34,24 @@ const dateTimeBoundarySchema = {
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`${fieldName} is required.`)
-  return value.trim()
+  const normalizedValue = value.trim()
+  if (normalizedValue.length > 200) {
+    throw new Error(`${fieldName} cannot be longer than 200 characters.`)
+  }
+  return normalizedValue
+}
+
+function requiredDate(value, fieldName) {
+  const date = requiredString(value, fieldName)
+  const parsedDate = new Date(`${date}T00:00:00Z`)
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== date
+  ) {
+    throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format.`)
+  }
+  return date
 }
 
 function requiredEnum(value, allowedValues, fieldName) {
@@ -79,7 +96,7 @@ function normalizeDateTimeBoundary(boundary, fieldName) {
     throw new Error(`${fieldName} is required for a date-time time limit.`)
   }
   return {
-    date: requiredString(boundary.date, `${fieldName}.date`),
+    date: requiredDate(boundary.date, `${fieldName}.date`),
     hours: String(requiredInteger(boundary.hours, `${fieldName}.hours`, 0, 23)).padStart(2, '0'),
     minutes: String(requiredInteger(boundary.minutes, `${fieldName}.minutes`, 0, 59)).padStart(
       2,
@@ -134,9 +151,12 @@ function resolveTargetNodeId(project, input) {
   return matchingNodes[0].id
 }
 
-function createPercentageNodeInput(input, project) {
+export function createPercentageNodeInput(input, project) {
   if (input.description !== undefined && typeof input.description !== 'string') {
     throw new Error('description must be a string when provided.')
+  }
+  if (input.description?.trim().length > 2_000) {
+    throw new Error('description cannot be longer than 2000 characters.')
   }
 
   return {
@@ -199,12 +219,14 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           targetNodeId: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description:
               'Optional exact ID of the existing placement target. Use this instead of targetNodeName.',
           },
           targetNodeName: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description:
               'Optional unique Name-field value of the placement target. Use this instead of targetNodeId.',
           },
@@ -222,8 +244,9 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           percentage: {
             type: 'string',
             minLength: 1,
+            maxLength: 10_050,
             description:
-              'Required finite percentage. Send it as a decimal string to preserve very large or high-precision values; negative values are allowed. When referenceValue is 0, calculate a separate amount from each above Value node. Otherwise calculate the amount from referenceValue.',
+              'Required finite percentage. Send it as a decimal string to preserve very large or high-precision values; negative values are allowed. When referenceValue is 0, calculate a separate amount from each immediate target’s current calculation field. Otherwise calculate the amount from referenceValue.',
           },
           isStatic: {
             type: 'boolean',
@@ -233,13 +256,15 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           referenceValue: {
             type: 'string',
             minLength: 1,
+            maxLength: 10_050,
             description:
-              'Optional finite decimal that defaults to 0. Send it as a decimal string to preserve very large or high-precision values. When non-zero, calculate one shared percentage amount from it; when 0, calculate each amount from its target Value node.',
+              'Optional finite decimal that defaults to 0. Send it as a decimal string to preserve very large or high-precision values. When non-zero, calculate one shared percentage amount from it; when 0, calculate each amount from its immediate target calculation field.',
           },
           time: {
             type: 'integer',
             minimum: 0,
-            description: 'Required non-negative integer time value.',
+            maximum: Number.MAX_SAFE_INTEGER,
+            description: 'Required non-negative safe-integer time value.',
           },
           timeUnit: {
             type: 'string',
@@ -269,10 +294,12 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
           name: {
             type: 'string',
             minLength: 1,
+            maxLength: 200,
             description: 'Required node name.',
           },
           description: {
             type: 'string',
+            maxLength: 2_000,
             description: 'Optional node description.',
           },
         },
@@ -303,7 +330,7 @@ export function registerCreatePercentageNodeTool({ getProjectId, onProjectUpdate
       },
       annotations: {
         readOnlyHint: false,
-        untrustedContentHint: false,
+        untrustedContentHint: true,
       },
     },
     { signal },

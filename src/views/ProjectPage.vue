@@ -5,6 +5,7 @@ import PercentageCard from '../components/PercentageCard.vue'
 import ValueCard from '../components/ValueCard.vue'
 import NodeTypePicker from '../components/shared/NodeTypePicker.vue'
 import { registerCreatePercentageNodeTool } from '../webmcp/registerCreatePercentageNodeTool.js'
+import { registerCreateInitialNodeTool } from '../webmcp/registerCreateInitialNodeTool.js'
 import { registerCreateValueNodeTool } from '../webmcp/registerCreateValueNodeTool.js'
 import { registerProjectNodeTools } from '../webmcp/registerProjectNodeTools.js'
 import { calculateProjectDurationInMilliseconds } from '../utils/calculation.js'
@@ -124,6 +125,7 @@ function removeProject() {
   if (!shouldDelete) return
 
   deleteCurrentProject()
+  void router.push({ name: 'start' })
 }
 
 function deleteCurrentProject() {
@@ -132,7 +134,6 @@ function deleteCurrentProject() {
   if (!storedProject) throw new Error(`Project ${projectId} was not found.`)
 
   deleteProject(projectId)
-  void router.push({ name: 'start' })
   return storedProject
 }
 
@@ -220,12 +221,12 @@ onMounted(async () => {
           properties: {},
           additionalProperties: false,
         },
-        execute: () => {
-          void router.push({ name: 'start' })
+        execute: async () => {
+          await router.push({ name: 'start' })
           return 'Opened the Time&Dime home page.'
         },
         annotations: {
-          readOnlyHint: true,
+          readOnlyHint: false,
           untrustedContentHint: false,
         },
       },
@@ -248,15 +249,15 @@ onMounted(async () => {
           properties: {},
           additionalProperties: false,
         },
-        execute: () => {
+        execute: async () => {
           const deletedProject = deleteCurrentProject()
+          await router.push({ name: 'start' })
           return `Deleted project "${deletedProject.name}" with ID ${deletedProject.id}.`
         },
         annotations: {
           readOnlyHint: false,
+          untrustedContentHint: true,
           destructiveHint: true,
-          idempotentHint: false,
-          untrustedContentHint: false,
         },
       },
       { signal: webMcpController.signal },
@@ -289,6 +290,20 @@ onMounted(async () => {
   } catch (error) {
     if (!webMcpController.signal.aborted) {
       console.warn('Could not register the WebMCP get-project-info tool.', error)
+    }
+  }
+
+  try {
+    await registerCreateInitialNodeTool({
+      getProjectId: () => String(route.params.id),
+      onProjectUpdated: (updatedProject) => {
+        project.value = updatedProject
+      },
+      signal: webMcpController.signal,
+    })
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the WebMCP create-initial-node tool.', error)
     }
   }
 

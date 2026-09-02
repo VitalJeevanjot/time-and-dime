@@ -32,6 +32,94 @@ function normalizeClockPart(value, maximum) {
   return String(normalized).padStart(2, '0')
 }
 
+function isValidDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsedDate = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === value
+}
+
+function validateWebMcpProjectInput(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Project input must be an object.')
+  }
+  if (typeof input.name !== 'string' || !input.name.trim()) {
+    throw new Error('name is required.')
+  }
+  if (input.name.trim().length > 200) throw new Error('name cannot exceed 200 characters.')
+  if (input.description !== undefined && typeof input.description !== 'string') {
+    throw new Error('description must be a string when provided.')
+  }
+  if (input.description?.trim().length > 5_000) {
+    throw new Error('description cannot exceed 5000 characters.')
+  }
+  if (!['duration', 'dateTime'].includes(input.endTimeMode)) {
+    throw new Error('endTimeMode must be duration or dateTime.')
+  }
+
+  if (input.endTimeMode === 'duration') {
+    const hasSimpleDuration =
+      input.endDuration !== undefined || input.endDurationUnit !== undefined
+    const hasCompositeDuration = input.endDurationParts !== undefined
+    if (!hasSimpleDuration && !hasCompositeDuration) {
+      throw new Error('A duration project requires endDuration/endDurationUnit or endDurationParts.')
+    }
+    if (hasSimpleDuration) {
+      if (!Number.isSafeInteger(input.endDuration) || input.endDuration < 0) {
+        throw new Error('endDuration must be a non-negative safe integer.')
+      }
+      if (!endTimeUnits.includes(input.endDurationUnit)) {
+        throw new Error(`endDurationUnit must be one of: ${endTimeUnits.join(', ')}.`)
+      }
+    }
+    if (hasCompositeDuration) {
+      const parts = input.endDurationParts
+      const allowedPartNames = new Set([
+        'years',
+        'months',
+        'days',
+        'hours',
+        'minutes',
+        'seconds',
+        'milliseconds',
+      ])
+      if (!parts || typeof parts !== 'object' || Array.isArray(parts)) {
+        throw new Error('endDurationParts must be an object.')
+      }
+      const partEntries = Object.entries(parts)
+      if (partEntries.length === 0) throw new Error('endDurationParts cannot be empty.')
+      partEntries.forEach(([partName, partValue]) => {
+        if (!allowedPartNames.has(partName)) {
+          throw new Error(`Unsupported duration part: ${partName}.`)
+        }
+        if (!Number.isSafeInteger(partValue) || partValue < 0) {
+          throw new Error(`${partName} must be a non-negative safe integer.`)
+        }
+      })
+    }
+    return
+  }
+
+  const dateFieldNames = ['startDate', 'endDate']
+  dateFieldNames.forEach((fieldName) => {
+    if (!isValidDate(input[fieldName])) {
+      throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format.`)
+    }
+  })
+  const clockFields = [
+    ['startHours', 23],
+    ['startMinutes', 59],
+    ['startSeconds', 59],
+    ['endHours', 23],
+    ['endMinutes', 59],
+    ['endSeconds', 59],
+  ]
+  clockFields.forEach(([fieldName, maximum]) => {
+    if (!Number.isInteger(input[fieldName]) || input[fieldName] < 0 || input[fieldName] > maximum) {
+      throw new Error(`${fieldName} must be an integer from 0 to ${maximum}.`)
+    }
+  })
+}
+
 function normalizeProjectInput(input) {
   const mode = input.endTimeMode === 'dateTime' ? 'dateTime' : 'duration'
   const duration = Number(input.endDuration)
@@ -50,7 +138,9 @@ function normalizeProjectInput(input) {
       mode,
       duration:
         compositeDuration?.value ??
-        (Number.isFinite(duration) ? Math.max(0, Math.trunc(duration)) : 0),
+        (Number.isFinite(duration)
+          ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.trunc(duration)))
+          : 0),
       durationUnit:
         compositeDuration?.unit ??
         (endTimeUnits.includes(input.endDurationUnit) ? input.endDurationUnit : 'Seconds'),
@@ -98,6 +188,10 @@ function applyProjectInput(projectDetails) {
 
 function createProject(projectDetails) {
   if (!projectDetails.name) throw new Error('A project name is required.')
+  if (projectDetails.name.length > 200) throw new Error('Project name cannot exceed 200 characters.')
+  if (projectDetails.description.length > 5_000) {
+    throw new Error('Project description cannot exceed 5000 characters.')
+  }
   if (projectDetails.endTime.mode === 'dateTime' && !projectDetails.startTime.date) {
     throw new Error('A start date is required for Date & time projects.')
   }
@@ -106,7 +200,6 @@ function createProject(projectDetails) {
   }
 
   const project = saveProject(projectDetails)
-  void router.push({ name: 'project', params: { id: project.id } })
   return project
 }
 
@@ -114,7 +207,8 @@ function submitProject() {
   formError.value = ''
 
   try {
-    createProject(normalizeProjectInput(getFormProjectInput()))
+    const project = createProject(normalizeProjectInput(getFormProjectInput()))
+    void router.push({ name: 'project', params: { id: project.id } })
   } catch (error) {
     formError.value =
       error instanceof Error
@@ -136,12 +230,12 @@ onMounted(async () => {
           properties: {},
           additionalProperties: false,
         },
-        execute: () => {
-          void router.push({ name: 'start' })
+        execute: async () => {
+          await router.push({ name: 'start' })
           return 'Opened the Time&Dime home page.'
         },
         annotations: {
-          readOnlyHint: true,
+          readOnlyHint: false,
           untrustedContentHint: false,
         },
       },
@@ -165,10 +259,12 @@ onMounted(async () => {
             name: {
               type: 'string',
               minLength: 1,
+              maxLength: 200,
               description: 'Name of the project.',
             },
             description: {
               type: 'string',
+              maxLength: 5_000,
               description: 'Optional description of the project.',
             },
             endTimeMode: {
@@ -179,6 +275,7 @@ onMounted(async () => {
             startDate: {
               type: 'string',
               format: 'date',
+              maxLength: 10,
               description: 'Start date in YYYY-MM-DD format. Used when endTimeMode is dateTime.',
             },
             startHours: {
@@ -202,7 +299,8 @@ onMounted(async () => {
             endDuration: {
               type: 'integer',
               minimum: 0,
-              description: 'Non-negative duration value. Used when endTimeMode is duration.',
+              maximum: Number.MAX_SAFE_INTEGER,
+              description: 'Non-negative safe-integer duration value. Used when endTimeMode is duration.',
             },
             endDurationUnit: {
               type: 'string',
@@ -214,13 +312,13 @@ onMounted(async () => {
               description:
                 'Composite duration parts. The smallest non-zero supplied unit becomes the stored unit and larger parts are converted into it. Years equal 12 months; for days or smaller, years equal 365 days and months equal 30 days.',
               properties: {
-                years: { type: 'integer', minimum: 0 },
-                months: { type: 'integer', minimum: 0 },
-                days: { type: 'integer', minimum: 0 },
-                hours: { type: 'integer', minimum: 0 },
-                minutes: { type: 'integer', minimum: 0 },
-                seconds: { type: 'integer', minimum: 0 },
-                milliseconds: { type: 'integer', minimum: 0 },
+                years: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                months: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                days: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                hours: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                minutes: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                seconds: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+                milliseconds: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
               },
               minProperties: 1,
               additionalProperties: false,
@@ -228,6 +326,7 @@ onMounted(async () => {
             endDate: {
               type: 'string',
               format: 'date',
+              maxLength: 10,
               description: 'End date in YYYY-MM-DD format. Used when endTimeMode is dateTime.',
             },
             endHours: {
@@ -278,15 +377,21 @@ onMounted(async () => {
           ],
           additionalProperties: false,
         },
-        execute: (input) => {
+        execute: async (input) => {
+          validateWebMcpProjectInput(input)
           const projectDetails = normalizeProjectInput(input)
           applyProjectInput(projectDetails)
           const project = createProject(projectDetails)
-          return `Created project "${project.name}" with ID ${project.id}.`
+          await router.push({ name: 'project', params: { id: project.id } })
+          return JSON.stringify(
+            { projectId: project.id, name: project.name, route: `/projects/${project.id}` },
+            null,
+            2,
+          )
         },
         annotations: {
           readOnlyHint: false,
-          untrustedContentHint: false,
+          untrustedContentHint: true,
         },
       },
       { signal: webMcpController.signal },

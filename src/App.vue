@@ -1,5 +1,27 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import { onMounted, onUnmounted } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { registerProjectWorkspaceTools } from './webmcp/registerProjectWorkspaceTools.js'
+
+const route = useRoute()
+const router = useRouter()
+const webMcpController = new AbortController()
+
+onMounted(async () => {
+  try {
+    await registerProjectWorkspaceTools({
+      router,
+      getCurrentProjectId: () => (route.name === 'project' ? String(route.params.id) : ''),
+      signal: webMcpController.signal,
+    })
+  } catch (error) {
+    if (!webMcpController.signal.aborted) {
+      console.warn('Could not register the global Time&Dime WebMCP tools.', error)
+    }
+  }
+})
+
+onUnmounted(() => webMcpController.abort())
 </script>
 
 <template>

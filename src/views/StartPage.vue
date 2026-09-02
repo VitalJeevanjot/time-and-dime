@@ -7,12 +7,17 @@ const router = useRouter()
 const projects = ref([])
 const webMcpController = new AbortController()
 
-onMounted(async () => {
+function loadProjects() {
   projects.value = getProjects().sort((firstProject, secondProject) => {
     const firstCreatedAt = Date.parse(firstProject.createdAt) || 0
     const secondCreatedAt = Date.parse(secondProject.createdAt) || 0
     return secondCreatedAt - firstCreatedAt
   })
+}
+
+onMounted(async () => {
+  loadProjects()
+  window.addEventListener('time-and-dime:projects-changed', loadProjects)
 
   if (!document.modelContext?.registerTool) return
 
@@ -26,12 +31,12 @@ onMounted(async () => {
           properties: {},
           additionalProperties: false,
         },
-        execute: () => {
-          void router.push('/projects/new')
+        execute: async () => {
+          await router.push({ name: 'create-project' })
           return 'Opened the Create Project page.'
         },
         annotations: {
-          readOnlyHint: true,
+          readOnlyHint: false,
           untrustedContentHint: false,
         },
       },
@@ -45,6 +50,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('time-and-dime:projects-changed', loadProjects)
   webMcpController.abort()
 })
 </script>

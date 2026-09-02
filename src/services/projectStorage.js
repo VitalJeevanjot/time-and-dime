@@ -2,6 +2,7 @@ import { createPercentageNode, createProjectRecord, createValueNode } from '../m
 
 const PROJECT_INDEX_KEY = 'time-and-dime.project-ids'
 const PROJECT_KEY_PREFIX = 'time-and-dime.project.'
+const MAX_ID_GENERATION_ATTEMPTS = 100
 
 function readJson(storageKey, fallback) {
   try {
@@ -44,6 +45,122 @@ export function getProject(projectId) {
 
 export function getProjects() {
   return readProjectIds().map(getProject).filter(Boolean)
+}
+
+function generateUniqueId(createId, isReserved, label) {
+  for (let attempt = 0; attempt < MAX_ID_GENERATION_ATTEMPTS; attempt += 1) {
+    const id = createId()
+    if (typeof id === 'string' && id.length > 0 && !isReserved(id)) return id
+  }
+
+  throw new Error(
+    `Could not generate a unique ${label} after ${MAX_ID_GENERATION_ATTEMPTS} attempts.`,
+  )
+}
+
+function storedProjectIdExists(projectId, knownProjectIds = new Set()) {
+  return (
+    knownProjectIds.has(projectId) ||
+    readProjectIds().includes(projectId) ||
+    localStorage.getItem(projectStorageKey(projectId)) !== null
+  )
+}
+
+/** Creates an independent copy with new project/node IDs and remapped graph relations. */
+export function cloneProject(sourceProjectId, overrides = {}) {
+  const sourceProject = getProject(sourceProjectId)
+  if (!sourceProject) throw new Error(`Project ${sourceProjectId} was not found.`)
+  if (!Array.isArray(sourceProject.nodes)) {
+    throw new Error(`Project ${sourceProjectId} does not contain a valid nodes array.`)
+  }
+
+  const sourceNodeIds = new Set()
+  sourceProject.nodes.forEach((node) => {
+    if (!node?.id) throw new Error('Every source node must have an ID before cloning.')
+    if (sourceNodeIds.has(node.id)) throw new Error(`Duplicate source node ID: ${node.id}.`)
+    if (!['value', 'percentage'].includes(node.type)) {
+      throw new Error(`Unsupported node type: ${node.type}.`)
+    }
+    sourceNodeIds.add(node.id)
+  })
+
+  const reservedNodeIds = new Set(sourceNodeIds)
+  const clonedNodes = sourceProject.nodes.map((node) => {
+    const createNode = node.type === 'value' ? createValueNode : createPercentageNode
+    const createClonedNode = () => createNode({
+      ...node,
+      id: undefined,
+      relations: { aboveCardIds: [], belowCardIds: [] },
+    })
+    const id = generateUniqueId(
+      () => createClonedNode().id,
+      (candidateId) => reservedNodeIds.has(candidateId),
+      `node ID for ${node.id}`,
+    )
+    reservedNodeIds.add(id)
+
+    return createNode({
+      ...node,
+      id,
+      relations: { aboveCardIds: [], belowCardIds: [] },
+    })
+  })
+  const nodeIdMap = new Map(
+    sourceProject.nodes.map((node, index) => [node.id, clonedNodes[index].id]),
+  )
+
+  const mapRelationIds = (node, relationName) => {
+    const relationIds = node.relations?.[relationName] ?? []
+    if (!Array.isArray(relationIds)) {
+      throw new Error(`Node ${node.id}.relations.${relationName} must be an array.`)
+    }
+    return relationIds.map((relationId) => {
+      const clonedRelationId = nodeIdMap.get(relationId)
+      if (!clonedRelationId) {
+        throw new Error(`Related node ${relationId} was not found while cloning.`)
+      }
+      return clonedRelationId
+    })
+  }
+
+  const nodes = clonedNodes.map((node, index) => ({
+    ...node,
+    relations: {
+      aboveCardIds: mapRelationIds(sourceProject.nodes[index], 'aboveCardIds'),
+      belowCardIds: mapRelationIds(sourceProject.nodes[index], 'belowCardIds'),
+    },
+  }))
+
+  const knownProjectIds = new Set(readProjectIds())
+  getProjects().forEach((project) => {
+    if (project?.id) knownProjectIds.add(project.id)
+  })
+  const projectId = generateUniqueId(
+    () => createProjectRecord().id,
+    (candidateId) => storedProjectIdExists(candidateId, knownProjectIds),
+    'project ID',
+  )
+  const clonedProject = createProjectRecord({
+    ...sourceProject,
+    id: projectId,
+    name: overrides.name ?? `${sourceProject.name} Copy`,
+    description: overrides.description ?? sourceProject.description,
+    nodes,
+    createdAt: undefined,
+    updatedAt: undefined,
+  })
+
+  // Recheck immediately before writing so an observed collision can never overwrite a project.
+  if (storedProjectIdExists(clonedProject.id, knownProjectIds)) {
+    throw new Error(`Project ID ${clonedProject.id} became unavailable before the clone was saved.`)
+  }
+  localStorage.setItem(projectStorageKey(clonedProject.id), JSON.stringify(clonedProject))
+  addProjectToIndex(clonedProject.id)
+
+  return {
+    project: clonedProject,
+    nodeIdMap: Object.fromEntries(nodeIdMap),
+  }
 }
 
 export function deleteProject(projectId) {
