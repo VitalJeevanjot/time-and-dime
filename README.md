@@ -1,11 +1,14 @@
 # Time&Dime
 Time&Dime is a locally running, time based values calculation engine. You build a model using Value and Percentage cards, then run it through their own individual times, and see the results from the above card's value or use that value as input further.
 
-The application uses imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create/delete projects, build/edit models, calculate/return results, clone, and compare them with the same local data the user sees.
+The application uses imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create/delete projects, build/edit models, calculate/return results, and compare them.
 
 ## Why it exists
+I often like to simplify certain workflows through UI to bring ease of usage even if that means it may need extra steps to perform something but it becomes much easier to start to learn. Here something like "Add 10 every 5 seconds, while applying 6% to current value" is easier to represent and construct some compliated models with multiple calculations involvement with 'over the time' factor either for the rest of the project's time or a certain card applying for certain duration only.
 
+```
 Many forecasts start as a sentence: “add 10 every five seconds, then apply 6% to the next value.” Spreadsheets can represent the arithmetic, but not always the timing and graph relationship clearly. Time&Dime makes each rule visible as a card and gives both the user and an AI agent a structured way to operate it.
+```
 
 ## Highlights
 
@@ -30,7 +33,7 @@ For a chain `A → B → C`, where A is below B and B is below C:
 
 A Value source supplies its current `value`. A Percentage source calculates an operand from either:
 
-- each immediate target’s current `value` or `percentage.value` when Reference Value is `0`; or
+- each immediate target’s (above node's) current `value` or `percentage.value` when Reference Value is `0`; or
 - its own non-zero Reference Value, producing one shared percentage operand.
 
 Repeating division is rounded with Decimal.js half-even rounding. Inputs are bounded to protect the browser from impractically large calculations.
