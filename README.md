@@ -1,14 +1,16 @@
 # Time&Dime
-Time&Dime is a locally running, time based values calculation engine. You build a model using Value and Percentage cards, then run it through their own individual times, and see the results from the above card's value or use that value as input further.
 
-The application uses imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create/delete projects, build/edit models, calculate/return results, and compare them.
+**Live demo: [time-and-dime.netlify.app](https://time-and-dime.netlify.app)** · Vue 3 · WebMCP · Decimal.js · MIT
+
+Time&Dime is a locally running, time-based value calculation engine. You build a model from Value and Percentage cards, give each card its own schedule, and watch each result feed the card above it.
+
+The app also registers imperative [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, so a compatible browser agent can create and delete projects, build and edit models, calculate results, and compare scenarios.
 
 ## Why it exists
-I often like to simplify certain workflows through UI to bring ease of usage even if that means it may need extra steps to perform something but it becomes much easier to start to learn. Here something like "Add 10 every 5 seconds, while applying 6% to current value" is easier to represent and construct some compliated models with multiple calculations involvement with 'over the time' factor either for the rest of the project's time or a certain card applying for certain duration only.
 
-```
-Many forecasts start as a sentence: “add 10 every five seconds, then apply 6% to the next value.” Spreadsheets can represent the arithmetic, but not always the timing and graph relationship clearly. Time&Dime makes each rule visible as a card and gives both the user and an AI agent a structured way to operate it.
-```
+I like turning fiddly workflows into a UI that is easy to start with, even when it takes a few extra clicks. A rule such as "add 10 every 5 seconds while applying 6% to the current value" is easier to build and reason about as cards. That matters most when several rules run over time, some for the whole project and some for a limited window.
+
+> Many forecasts start as a sentence: "add 10 every five seconds, then apply 6% to the next value." Spreadsheets can represent the arithmetic, but not always the timing and graph relationship clearly. Time&Dime makes each rule visible as a card and gives both the user and an AI agent a structured way to operate it.
 
 ## Highlights
 
@@ -111,11 +113,12 @@ Time&Dime has no application backend, user accounts, or cloud sync. Project reco
 
 Codex was used as a pair-programming agent for implementation, review, tests, and documentation. Product behavior and graph semantics were directed by the project author. The runtime calculator itself is deterministic; it does not use a generative model. See [docs/hackathon-build/build-notes.md](docs/hackathon-build/build-notes.md).
 
-## Hackathon materials
+## Project notes
 
-- [Devpost submission draft](devpost-submission.md)
-- [Demo and screenshot plan](docs/DEMO.md)
+- [Demo walkthrough and suggested agent prompt](docs/DEMO.md)
 - [WebMCP implementation notes](docs/WEBMCP.md)
+- [Architecture: graph and scheduling](docs/ARCHITECTURE.md)
+- [AI-assisted build notes](docs/hackathon-build/build-notes.md)
 
 ## License
 

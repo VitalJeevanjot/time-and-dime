@@ -9,7 +9,7 @@ This is a local draft, not a submitted Devpost entry. Select the exact event and
 - Event/category/track: `TODO after event selection`
 - Team members: `TODO`
 - Technologies: `Vue 3, Vite, JavaScript, Decimal.js, WebMCP, localStorage`
-- Try-it-out instructions: `TODO after deployment decision`
+- Try-it-out instructions: open https://time-and-dime.netlify.app, or run locally with `npm ci && npm run dev`
 
 ## Problem
 
@@ -38,7 +38,7 @@ The graph makes a multi-step scenario explainable to a person, while typed WebMC
 
 Time&Dime is a Vue 3/Vite single-page application with no application backend. One `localStorage` entry is used per project UUID. Decimal.js performs calculation-field arithmetic from canonical strings; BigInt represents schedule milliseconds. An event-driven virtual-time scheduler orders simultaneous nodes bottom-to-top, and the propagation layer updates only unique immediate parents. Route and app components register WebMCP tools that reuse the same storage, validation, graph, and calculation modules.
 
-More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+More detail: [docs/ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## How we used Codex
 
@@ -89,7 +89,7 @@ The suites cover precision paths, immediate propagation, static nodes, target-re
 6. In a browser with `document.modelContext.registerTool`, call `list_projects`, `open_project`, `calculate_project`, and `get_calculation_result`.
 7. Clone the project, change a node, and call `compare_scenarios`.
 
-Full walkthrough: [docs/DEMO.md](docs/DEMO.md).
+Full walkthrough: [docs/DEMO.md](../DEMO.md).
 
 ## Demo video outline
 
@@ -102,8 +102,8 @@ Full walkthrough: [docs/DEMO.md](docs/DEMO.md).
 
 ## Links
 
-- Public repository: `TODO — the current repository is private; confirm event policy before publishing`
-- Live demo: `TODO — deploy with SPA route fallback, or explicitly document a local-demo fallback`
+- Public repository: https://github.com/VitalJeevanjot/time-and-dime
+- Live demo: https://time-and-dime.netlify.app
 - Demo video: `TODO — record and add a public/viewable URL if required`
 
 ## Media to capture
